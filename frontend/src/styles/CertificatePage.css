@@ -1,0 +1,418 @@
+.certificate-container {
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.background-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+}
+
+.content-wrapper {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.controls-header {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  margin-bottom: 30px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.controls-content {
+  padding: 20px 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.controls-content h1 {
+  color: white;
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.controls-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: #4f46e5;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #4338ca;
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background: #059669;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #047857;
+  transform: translateY(-2px);
+}
+
+.btn-outline {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.btn-outline:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
+}
+
+.certificate-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 40px;
+}
+
+.certificate {
+  width: 800px;
+  min-height: 600px;
+  background: white;
+  padding: 40px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  font-family: 'Times New Roman', serif;
+  position: relative;
+}
+
+/* Header Section */
+.certificate-header {
+  margin-bottom: 30px;
+}
+
+.header-left {
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.ministry-logo {
+  flex-shrink: 0;
+}
+
+.logo-circle {
+  width: 80px;
+  height: 80px;
+  border: 3px solid #d32f2f;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+}
+
+.logo-bridge {
+  width: 50px;
+  height: 40px;
+  position: relative;
+}
+
+.bridge-arch {
+  width: 40px;
+  height: 20px;
+  border: 3px solid #d32f2f;
+  border-bottom: none;
+  border-radius: 20px 20px 0 0;
+  position: absolute;
+  top: 5px;
+  left: 5px;
+}
+
+.bridge-pillars {
+  position: absolute;
+  bottom: 0;
+  left: 8px;
+  right: 8px;
+  height: 3px;
+  background: #d32f2f;
+}
+
+.bridge-pillars::before,
+.bridge-pillars::after {
+  content: '';
+  position: absolute;
+  width: 3px;
+  height: 15px;
+  background: #d32f2f;
+  bottom: 0;
+}
+
+.bridge-pillars::before { left: 0; }
+.bridge-pillars::after { right: 0; }
+
+.ministry-text {
+  text-align: center;
+  color: #d32f2f;
+  font-weight: bold;
+}
+
+.ministry-name {
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.ministry-sub {
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.ministry-motto {
+  font-size: 12px;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* Title Section */
+.certificate-title {
+  text-align: center;
+  margin-bottom: 40px;
+  color: #d32f2f;
+}
+
+.certificate-title h1 {
+  font-size: 28px;
+  font-weight: bold;
+  margin: 0 0 8px 0;
+  letter-spacing: 2px;
+}
+
+.certificate-title h2 {
+  font-size: 18px;
+  font-weight: bold;
+  margin: 0 0 16px 0;
+  letter-spacing: 1px;
+}
+
+.authority {
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+}
+
+/* Content Section */
+.certificate-content {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+}
+
+.photo-section {
+  flex-shrink: 0;
+  width: 180px;
+}
+
+.photo-placeholder {
+  width: 120px;
+  height: 160px;
+  border: 2px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f9f9f9;
+  margin-bottom: 20px;
+}
+
+.photo-text {
+  text-align: center;
+  font-size: 12px;
+  color: #666;
+}
+
+.photo-note {
+  font-size: 10px;
+  margin-top: 8px;
+  line-height: 1.2;
+}
+
+.certificate-number {
+  font-size: 14px;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.issue-info {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #333;
+}
+
+.info-section {
+  flex: 1;
+}
+
+.info-row {
+  display: flex;
+  margin-bottom: 16px;
+  font-size: 14px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.label {
+  font-weight: normal;
+  color: #333;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+.label-right {
+  font-weight: normal;
+  color: #333;
+  margin-left: 40px;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+.value {
+  font-weight: bold;
+  color: #000;
+  flex: 1;
+  min-width: 100px;
+}
+
+.location-date {
+  margin-top: 40px;
+  text-align: right;
+  font-size: 14px;
+  color: #333;
+}
+
+/* Print Styles */
+@media print {
+  .controls-header {
+    display: none !important;
+  }
+  
+  .certificate-container {
+    background: none !important;
+    padding: 0 !important;
+  }
+  
+  .certificate-wrapper {
+    margin: 0 !important;
+  }
+  
+  .certificate {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .content-wrapper {
+    padding: 10px;
+  }
+  
+  .controls-content {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+  
+  .controls-buttons {
+    justify-content: center;
+  }
+  
+  .certificate {
+    width: 100%;
+    max-width: 100%;
+    padding: 20px;
+    font-size: 14px;
+  }
+  
+  .certificate-content {
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .photo-section {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+  }
+  
+  .header-left {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .ministry-text {
+    margin-top: 10px;
+  }
+}
+
+@media (max-width: 480px) {
+  .certificate {
+    padding: 15px;
+  }
+  
+  .certificate-title h1 {
+    font-size: 24px;
+  }
+  
+  .certificate-title h2 {
+    font-size: 16px;
+  }
+  
+  .btn {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+  
+  .controls-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

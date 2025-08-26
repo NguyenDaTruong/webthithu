@@ -1,0 +1,26 @@
+.logoloop {
+  position: relative;
+  overflow-x: hidden;
+  width: 100%;
+  background: transparent;
+}
+
+.logoloop__track {
+  display: flex;
+  will-change: transform;
+}
+
+.logoloop__list {
+  display: flex;
+  align-items: center;
+}
+
+.logoloop__item {
+  flex: 0 0 auto;
+  margin-right: var(--logoloop-gap, 40px);
+  font-size: var(--logoloop-logoHeight, 48px);
+}
+
+.logoloop__item:last-child {
+  margin-right: var(--logoloop-gap, 40px);
+}

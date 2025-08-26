@@ -1,0 +1,234 @@
+.card-nav-container {
+  width: 90%;
+  max-width: 800px;
+  margin: 2em auto 0 auto;
+  z-index: 99;
+  box-sizing: border-box;
+  pointer-events: auto;
+  background: transparent;
+  position: relative; /* <-- Đổi từ absolute sang relative */
+}
+
+.card-nav {
+  display: block;
+  height: 60px;
+  padding: 0;
+  background: rgba(255,255,255,0.12); /* Nền sáng hơn, giảm trong suốt */
+  border: 2px solid #fff;             /* Viền trắng rõ nét */
+  border-radius: 1rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.28); /* Shadow đậm hơn */
+  position: relative;
+  overflow: hidden;
+  will-change: height;
+  backdrop-filter: blur(12px);
+  top: 5rem;
+}
+
+.card-nav-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  z-index: 10; /* Đảm bảo dấu X luôn trên cùng */
+}
+
+.hamburger-menu {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  gap: 6px;
+}
+
+.hamburger-line {
+  width: 32px;
+  height: 3px;
+  background-color: currentColor;
+  border-radius: 2px;
+  transition: transform 0.25s, opacity 0.2s, margin 0.3s;
+}
+
+.hamburger-menu.open .hamburger-line:first-child {
+  transform: translateY(6px) rotate(45deg);
+}
+.hamburger-menu.open .hamburger-line:last-child {
+  transform: translateY(-6px) rotate(-45deg);
+}
+
+.card-nav-cta-button {
+  background-color: #fff;
+  color: #222;
+  font-weight: bold;
+  border: none;
+  border-radius: 0.6rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  padding: 0 1.2rem;
+  height: 40px;
+  font-weight: 500;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.3s;
+}
+
+.card-nav-cta-button:hover {
+  background: #333;
+}
+
+.card-nav-content {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 60px;
+  bottom: 0;
+  padding: 1rem;
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 1; /* Các thẻ con nằm dưới dấu X */
+}
+
+.card-nav.open .card-nav-content {
+  visibility: visible;
+  pointer-events: auto;
+  margin-top: 10px;
+}
+
+.nav-card {
+  height: 100%;
+  flex: 1 1 0;
+  min-width: 0;
+  border-radius: 0.8rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px;
+  gap: 10px;
+  user-select: none;
+  background: rgba(40, 30, 60, 0.85);
+  border: 1px solid #fff;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+  overflow: hidden;
+}
+
+/* Background image layer */
+.nav-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--card-bg);
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.9) saturate(1.1);
+  opacity: 0.25;
+  transition: opacity 0.3s ease;
+}
+
+/* Overlay gradient for readability */
+.nav-card-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,0.55), rgba(0,0,0,0.15));
+  pointer-events: none;
+}
+
+/* Ensure text wraps nicely */
+.nav-card-label {
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.4px;
+  color: #fff;
+  word-break: break-word;
+  overflow-wrap: anywhere; /* xuống dòng tự nhiên khi thiếu không gian */
+}
+
+.nav-card-links {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* CTA button appears on hover */
+.nav-card-cta {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  background: #fff;
+  color: #111;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(8px);
+  opacity: 0;
+  transition: all 0.25s ease;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+}
+
+.nav-card:hover .nav-card-cta {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.nav-card:hover::before { opacity: 0.4; }
+
+.nav-card-link {
+  font-size: 16px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity 0.3s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;                        /* Chữ trắng nổi bật */
+}
+
+.nav-card-link:hover {
+  opacity: 0.75;
+  text-decoration: underline;
+}
+
+/* Responsive giữ nguyên như cũ */
+@media (max-width: 768px) {
+  .card-nav-container {
+    width: 98%;
+    top: 1em;
+  }
+  .card-nav-top {
+    padding: 0.5rem 1rem;
+    justify-content: space-between;
+  }
+  .card-nav-cta-button {
+    display: none;
+  }
+  .card-nav-content {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 0.5rem;
+    bottom: 0;
+    justify-content: flex-start;
+  }
+  .nav-card {
+    height: auto;
+    min-height: 60px;
+    flex: 1 1 auto;
+    max-height: none;
+  }
+  .nav-card-label {
+    font-size: 18px;
+  }
+  .nav-card-link {
+    font-size: 15px;
+  }
+  .nav-card-cta { padding: 9px 12px; font-size: 15px; }
+}
