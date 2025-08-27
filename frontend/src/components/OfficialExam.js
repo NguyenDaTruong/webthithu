@@ -283,10 +283,10 @@ const OfficialExam = () => {
         <div className="header-content">
           <div className="header-brand" onClick={handleHeaderClick} style={{ cursor: 'pointer' }}>
             <span className="header-logo">🚦</span>
-            <span className="header-title">Thi Thật GPLX</span>
+            <span className="header-title">Thi chứng nhận an toàn giao thông</span>
           </div>
           <div className="header-actions">
-            <button className="feedback-button">Góp ý</button>
+            {/* <button className="feedback-button">Góp ý</button> */}
           </div>
         </div>
       </div>
@@ -332,7 +332,7 @@ const OfficialExam = () => {
             <div>
               <TextType
                 key={`exam-title-${currentQuestion}`}
-                text={[`Đề thi thật - ${questions ? questions.length : 0} câu hỏi`, `Bạn đang ở câu hỏi thứ ${currentQuestion + 1}`]}
+                text={[`Đề thi - ${questions ? questions.length : 0} câu hỏi`, `Bạn đang ở câu hỏi thứ ${currentQuestion + 1}`]}
                 className="exam-title"
                 typingSpeed={75}
                 initialDelay={500}

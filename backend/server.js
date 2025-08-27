@@ -1,6 +1,9 @@
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
 const { connectDB } = require('./config/db');
 const questionRoutes = require('./routes/questionRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 const app = express();
 
@@ -21,7 +24,15 @@ app.use(express.json());
 
 connectDB();
 
+// Ensure uploads directory exists and serve static files
+const uploadsDir = path.join(__dirname, 'uploads');
+const avatarsDir = path.join(uploadsDir, 'avatars');
+try { if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir); } catch {}
+try { if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir); } catch {}
+app.use('/uploads', express.static(uploadsDir));
+
 app.use('/api/questions', questionRoutes);
+app.use('/api/auth', authRoutes);
 
 app.listen(process.env.PORT || 5000, () => {
   console.log(`Server running on port ${process.env.PORT || 5000}`);

@@ -1,0 +1,76 @@
+/* Background wrapper */
+.profile-container { position: relative; min-height: 100vh; }
+.profile-background { position: fixed; inset: 0; z-index: -1; }
+
+/* Layout */
+.profile-wrapper { padding: 24px; display: flex; justify-content: center; }
+.profile-layout.glass { width: min(1100px, 96%); border-radius: 20px; background: rgba(13,7,22,0.55); border: 1px solid rgba(255,255,255,0.08); backdrop-filter: blur(12px); color: #fff; box-shadow: 0 20px 60px rgba(0,0,0,0.35); display: grid; grid-template-columns: 240px 1fr; min-height: 640px; }
+.profile-sidebar { border-right: 1px solid rgba(255,255,255,0.08); padding: 18px 14px; }
+.sidebar-item { padding: 12px 14px; border-radius: 10px; cursor: pointer; color: #d6d6e8; margin-bottom: 8px; }
+.sidebar-item.active, .sidebar-item:hover { background: rgba(167,139,250,0.15); color: #fff; border: 1px solid rgba(167,139,250,0.35); }
+.profile-content { padding: 8px 18px 20px; }
+
+.profile-header { text-align: center; padding: 28px 24px 10px; }
+.profile-avatar { width: 120px; height: 120px; margin: 0 auto 16px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 3px solid rgba(255,255,255,0.18); display: grid; place-items: center; font-size: 42px; position: relative; overflow: visible; }
+.profile-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+.avatar-upload { position: absolute; right: -14px; bottom: -14px; width: 40px; height: 40px; border-radius: 50%; background: #7c3aed; display: grid; place-items: center; font-size: 18px; border: 2px solid rgba(255,255,255,0.9); cursor: pointer; z-index: 3; box-shadow: 0 6px 18px rgba(0,0,0,0.35); color: #fff; }
+.avatar-upload::before { content: '\1F4F7'; display: grid; place-items: center; width: 100%; height: 100%; line-height: 40px; text-align: center; }
+.avatar-upload:hover { filter: brightness(1.05); }
+
+/* Avatar modal */
+.avatar-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: grid; place-items: center; z-index: 100; }
+.avatar-modal { position: relative; background: rgba(13,7,22,0.95); border: 1px solid rgba(255,255,255,0.12); padding: 24px; border-radius: 14px; max-width: 90vw; max-height: 90vh; display: grid; place-items: center; }
+.avatar-modal img { display:block; max-width: 80vw; max-height: 80vh; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.4); }
+.avatar-modal-close { position: absolute; top: 10px; right: 10px; background: #ef4444; color: #fff; border: 1px solid #ef4444; border-radius: 999px; padding: 6px 10px; cursor: pointer; z-index: 10; box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
+
+.status-badge { display: inline-block; margin-top: 8px; padding: 6px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.status-active { background: rgba(33, 201, 111, 0.18); color: #D1FADF; border: 1px solid rgba(33, 201, 111, 0.35); }
+.status-inactive { background: rgba(255, 71, 87, 0.15); color: #FFD1D1; border: 1px solid rgba(255, 71, 87, 0.35); }
+
+.form-container { padding: 20px 24px 28px; }
+.form-section { margin-bottom: 28px; }
+.section-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 14px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.12); }
+
+/* Summary view */
+.profile-summary { padding: 8px 2px; }
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.summary-item { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 10px 12px; }
+.summary-item.full { grid-column: 1 / -1; }
+.summary-item .label { display: block; font-size: 12px; color: #a9a8c1; margin-bottom: 4px; }
+.summary-item .value { color: #fff; font-weight: 600; }
+
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.form-group { display: flex; flex-direction: column; }
+.form-group.full-width { grid-column: 1 / -1; }
+
+label { color: #cfcfe1; margin-bottom: 6px; font-size: 13px; }
+.required { color: #ef4444; }
+
+input, select, textarea { color: #fff; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 10px 12px; outline: none; transition: border-color .2s, box-shadow .2s; }
+input:focus, select:focus, textarea:focus { border-color: rgba(167,139,250,0.8); box-shadow: 0 0 0 3px rgba(167,139,250,0.18); }
+
+.gender-group { display: flex; gap: 10px; }
+.radio-option { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; cursor: pointer; transition: all .2s; background: rgba(255,255,255,0.04); }
+.radio-option.active { background: rgba(167,139,250,0.15); border-color: rgba(167,139,250,0.6); }
+
+.license-section { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 16px; }
+.license-toggle { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.toggle-switch { width: 56px; height: 28px; background: #666; border-radius: 999px; position: relative; cursor: pointer; }
+.toggle-switch::after { content: ''; position: absolute; width: 22px; height: 22px; top: 3px; left: 3px; border-radius: 50%; background: #fff; transition: left .2s; }
+.toggle-switch.active { background: #22c55e; }
+.toggle-switch.active::after { left: 31px; }
+.license-details { display: none; }
+.license-details.show { display: block; animation: fadeIn .3s ease; }
+
+.score-display { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.score-bar { flex: 1; height: 8px; background: rgba(255,255,255,0.12); border-radius: 6px; overflow: hidden; }
+.score-fill { height: 100%; border-radius: 6px; }
+
+.btn-container { display: flex; gap: 12px; justify-content: center; margin-top: 18px; }
+.btn { padding: 12px 20px; border-radius: 10px; border: none; cursor: pointer; font-weight: 700; }
+.btn-primary { background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%); color: #fff; }
+.btn-secondary { background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.18); }
+
+@media (max-width: 768px) {
+  .profile-wrapper { padding: 16px; }
+}

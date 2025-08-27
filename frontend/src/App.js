@@ -4,6 +4,9 @@ import HomePage from './pages/HomePage';
 import QuizPage from './pages/QuizPage';
 import ExamPage from './pages/ExamPage';
 import CertificatePage from './pages/CertificatePage';
+import AuthPage from './pages/AuthPage';
+import ProfilePage from './pages/ProfilePage';
+import SiteHeader from './components/SiteHeader.jsx';
 import CardNav from './components/CardNav';
 
 const navItems = [
@@ -39,13 +42,14 @@ const navItems = [
 function App() {
   return (
     <Router>
-      {/* Xóa hoặc comment dòng này nếu chỉ muốn nav ở HomePage */}
-      {/* <CardNav items={navItems} menuColor="#fff" /> */}
+      <SiteHeader />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/quiz" element={<QuizPage />} />
         <Route path="/exam" element={<ExamPage />} />
         <Route path="/certificate" element={<CertificatePage />} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Routes>
     </Router>
   );

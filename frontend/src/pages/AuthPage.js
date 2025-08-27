@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DarkVeil from '../components/DarkVeil';
 import '../styles/AuthPage.css';
@@ -15,6 +15,7 @@ const AuthPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  // Removed success toast per request
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -51,9 +52,7 @@ const AuthPage = () => {
         // Store user data in localStorage
         localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.setItem('token', data.token);
-        
-        alert(`${isSignUp ? 'Đăng ký' : 'Đăng nhập'} thành công!`);
-        navigate('/'); // Redirect to homepage
+        navigate('/');
       } else {
         setError(data.message || 'Có lỗi xảy ra');
       }
@@ -67,6 +66,7 @@ const AuthPage = () => {
 
   return (
     <div className="auth-container">
+      {/* Success toast removed */}
       {/* Background */}
       <div className="background-container">
         <DarkVeil
@@ -190,14 +190,7 @@ const AuthPage = () => {
                 disabled={isLoading}
                 className="submit-button"
               >
-                {isLoading ? (
-                  <div className="loading-spinner">
-                    <div className="spinner"></div>
-                    {isSignUp ? 'Đang tạo tài khoản...' : 'Đang đăng nhập...'}
-                  </div>
-                ) : (
-                  isSignUp ? 'Đăng ký' : 'Đăng nhập'
-                )}
+                {isLoading ? (isSignUp ? 'Đang tạo tài khoản...' : 'Đang đăng nhập...') : (isSignUp ? 'Đăng ký' : 'Đăng nhập')}
               </button>
             </form>
 

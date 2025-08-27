@@ -2,13 +2,38 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DarkVeil from '../components/DarkVeil';
 import "../styles/homepage.css";
+import { isLoggedIn, fetchProfile, isProfileComplete } from '../utils/auth';
 
 const HomePage = () => {
   const navigate = useNavigate();
   const [hoveredCard, setHoveredCard] = useState(null);
 
-  const handleNavigation = (path) => {
-    navigate(path);
+  const [authPopup, setAuthPopup] = useState({ visible: false, title: '', message: '' });
+
+  const handleFeatureClick = async (feature) => {
+    if (feature.id !== 'exam') {
+      navigate(feature.path);
+      return;
+    }
+    // Kiểm tra điều kiện trước khi đi tới thi thật
+    if (!isLoggedIn()) {
+      setAuthPopup({
+        visible: true,
+        title: 'Yêu cầu đăng nhập',
+        message: 'Bạn cần đăng nhập để làm bài thi thật. Chuyển đến trang đăng nhập/đăng ký?'
+      });
+      return;
+    }
+    const profile = await fetchProfile();
+    if (!isProfileComplete(profile)) {
+      setAuthPopup({
+        visible: true,
+        title: 'Hoàn thiện hồ sơ',
+        message: 'Vui lòng hoàn thiện hồ sơ (Họ tên, SĐT, Ngày sinh, Giới tính, Địa chỉ, CMND/CCCD, Ảnh đại diện) trước khi thi.'
+      });
+      return;
+    }
+    navigate('/exam');
   };
 
   const features = [
@@ -66,15 +91,7 @@ const HomePage = () => {
       </div>
 
       <div className="content-wrapper">
-        <header className="main-header">
-          <div className="header-glass">
-            <div className="logo-section">
-              <div className="logo-icon">🚗</div>
-              <span className="logo-text">TrafficExam</span>
-            </div>
-            <button className="header-cta" onClick={() => navigate('/quiz')}>Đăng nhập</button>
-          </div>
-        </header>
+        {/* Header đã chuyển thành component dùng chung (SiteHeader) */}
 
         <section className="hero-section">
           <div className="hero-content">
@@ -109,7 +126,7 @@ const HomePage = () => {
                 className={`feature-card ${hoveredCard === feature.id ? 'hovered' : ''}`}
                 onMouseEnter={() => setHoveredCard(feature.id)}
                 onMouseLeave={() => setHoveredCard(null)}
-                onClick={() => handleNavigation(feature.path)}
+                onClick={() => handleFeatureClick(feature)}
                 style={{ '--delay': `${index * 0.1}s` }}
               >
                 <div className="card-background" style={{ background: feature.gradient }}></div>
@@ -158,6 +175,30 @@ const HomePage = () => {
             </div>
           </div>
         </section>
+        {/* Popup yêu cầu đăng nhập/hoàn thiện hồ sơ hiển thị ngay trên homepage */}
+        {authPopup.visible && (
+          <div className="home-popup-overlay">
+            <div className="home-popup">
+              <div className="home-popup-content">
+                <h3>{authPopup.title}</h3>
+                <p>{authPopup.message}</p>
+                <div className="home-popup-buttons">
+                  <button onClick={() => setAuthPopup({ visible: false, title: '', message: '' })} className="home-popup-btn cancel">
+                    Quay lại
+                  </button>
+                  <button
+                    onClick={() =>
+                      authPopup.title === 'Hoàn thiện hồ sơ' ? navigate('/profile') : navigate('/auth')
+                    }
+                    className="home-popup-btn confirm"
+                  >
+                    {authPopup.title === 'Hoàn thiện hồ sơ' ? 'Đến trang hồ sơ' : 'Đến trang đăng nhập'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
