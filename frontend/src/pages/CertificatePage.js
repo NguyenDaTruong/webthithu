@@ -188,7 +188,6 @@ const CertificatePage = () => {
         unit: 'mm',
         format: 'a4'
       });
-
       const imgData = canvas.toDataURL('image/png');
       const imgWidth = 210; // A4 portrait width in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
