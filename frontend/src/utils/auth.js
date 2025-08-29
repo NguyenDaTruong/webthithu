@@ -42,6 +42,24 @@ export const fetchProfile = async () => {
   }
 };
 
+export const updateProfileApi = async (payload) => {
+  const token = getToken();
+  if (!token) throw new Error('Not logged in');
+  const res = await fetch(`${API_BASE}/api/auth/profile`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.message || 'Update profile failed');
+  }
+  return data?.user;
+};
+
 export const isProfileComplete = (profile) => {
   if (!profile) return false;
   const requiredFields = ['fullName', 'phone', 'dateOfBirth', 'gender', 'address', 'idCard'];

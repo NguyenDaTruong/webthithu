@@ -6,6 +6,7 @@ import ExamPage from './pages/ExamPage';
 import CertificatePage from './pages/CertificatePage';
 import AuthPage from './pages/AuthPage';
 import ProfilePage from './pages/ProfilePage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import SiteHeader from './components/SiteHeader.jsx';
 import CardNav from './components/CardNav';
 
@@ -50,6 +51,7 @@ function App() {
         <Route path="/certificate" element={<CertificatePage />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Routes>
     </Router>
   );

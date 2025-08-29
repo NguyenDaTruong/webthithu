@@ -116,8 +116,8 @@ const HomePage = () => {
 
         <section className="features-section">
           <div className="features-header">
-            <h2 className="section-title">Chọn chức năng</h2>
-            <p className="section-subtitle">Bắt đầu hành trình của bạn ngay hôm nay</p>
+            <h2 className="section-title">Các lựa chọn cho bạn </h2>
+            <p className="section-subtitle">Bắt đầu hành trình của bạn ngay ngày hôm nay</p>
           </div>
           <div className="features-grid">
             {features.map((feature, index) => (

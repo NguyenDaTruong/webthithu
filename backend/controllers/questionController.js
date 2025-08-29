@@ -7,7 +7,6 @@ exports.getAllQuestions = async (req, res) => {
     const result = await pool.request().query('SELECT * FROM [dbo].[Questions]');
     res.json(result.recordset);
   } catch (err) {
-    console.error('Error in getAllQuestions:', err);
     res.status(500).json({ error: err.message });
   }
 };
@@ -29,7 +28,6 @@ exports.getRandomQuestions = async (req, res) => {
     
     res.json(result.recordset);
   } catch (err) {
-    console.error('Error in getRandomQuestions:', err);
     res.status(500).json({ error: err.message });
   }
 };

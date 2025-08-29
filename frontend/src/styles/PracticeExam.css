@@ -5,6 +5,8 @@
   position: relative;
   min-height: 100vh;
   overflow: hidden;
+  /* Offset sticky global header */
+  padding-top: 96px;
 }
 
 /* Background */
@@ -689,6 +691,9 @@
 @media (max-width: 768px) {
   .exam-grid {
     grid-template-columns: 1fr;
+  }
+  .practice-exam-container {
+    padding-top: 88px;
   }
   
   .exam-title {

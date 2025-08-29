@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, getProfile, logout, uploadAvatar } = require('../controllers/authController');
+const { register, login, getProfile, logout, uploadAvatar, updateProfile, changePassword, forgotPassword, resetPassword } = require('../controllers/authController');
 const { authenticateToken } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');
@@ -40,5 +40,17 @@ router.post('/logout', authenticateToken, logout);
 
 // Upload avatar
 router.post('/avatar', authenticateToken, upload.single('avatar'), uploadAvatar);
+
+// Update profile
+router.put('/profile', authenticateToken, updateProfile);
+
+// Change password (protected route)
+router.post('/change-password', authenticateToken, changePassword);
+
+// Forgot password (public route)
+router.post('/forgot-password', forgotPassword);
+
+// Reset password (public route)
+router.post('/reset-password', resetPassword);
 
 module.exports = router;

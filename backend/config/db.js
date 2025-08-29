@@ -18,9 +18,9 @@ let pool;
 async function connectDB() {
   try {
     pool = await sql.connect(config);
-    console.log('Connected to SQL Server successfully');
+    
   } catch (err) {
-    console.error('Database connection failed:', err);
+    
   }
 }
 

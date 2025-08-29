@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import DarkVeil from '../components/DarkVeil';
 import TextType from '../components/TextType';
 import '../styles/PracticeExam.css';
+import { API_BASE, getToken, getUser } from '../utils/auth';
 
 const OfficialExam = () => {
   const [questions, setQuestions] = useState([]);
@@ -24,12 +25,17 @@ const OfficialExam = () => {
   const [changeMessage, setChangeMessage] = useState('');
   const [changeTimeout, setChangeTimeout] = useState(null);
   
+  // Trạng thái chứng chỉ
+  const [certificateNote, setCertificateNote] = useState('');
+  const [certificateApiError, setCertificateApiError] = useState('');
+  const isAdmin = (() => { try { const u = getUser(); return u && (u.id === 1 || u.role === 'admin'); } catch { return false; } })();
 
-  
   // Sử dụng useRef để lưu trạng thái trang (không bị reset khi re-render)
   const isPageHiddenRef = useRef(false);
   
   useEffect(() => {
+    // Vào trang thi thật, đảm bảo cuộn lên đầu trang để không bị header dính che
+    try { window.scrollTo(0, 0); } catch {}
     const fetchQuestions = async () => {
       try {
         const res = await fetch('http://localhost:5000/api/questions');
@@ -52,8 +58,6 @@ const OfficialExam = () => {
       handleSubmit();
     }
   }, [timeLeft, isSubmitted, questions.length]);
-
-
 
   // Hiển thị thông báo sửa đáp án
   const showChangeMessage = (message) => {
@@ -109,11 +113,6 @@ const OfficialExam = () => {
     };
     
     const onBlur = () => {
-      // Chỉ xử lý blur khi:
-      // 1. Trang không bị ẩn (tránh duplicate với visibilitychange)
-      // 2. isPageHiddenRef.current = false (chưa được đánh dấu là ẩn)
-      // 3. Chưa bị hủy tư cách thi
-      // 4. Chưa có popup cảnh báo đang hiển thị
       if (!document.hidden && !isPageHiddenRef.current && !disqualified && !showAntiCheatPopup) {
         isPageHiddenRef.current = true;
         registerViolation();
@@ -121,9 +120,6 @@ const OfficialExam = () => {
     };
     
     const onFocus = () => {
-      // Chỉ reset isPageHiddenRef khi chưa bị hủy tư cách thi và không có popup cảnh báo
-      // Điều này đảm bảo rằng sau khi người dùng quay lại trang (và popup không hiển thị),
-      // isPageHiddenRef được đặt lại để phát hiện lần rời trang tiếp theo.
       if (!disqualified && !showAntiCheatPopup) {
         isPageHiddenRef.current = false;
       }
@@ -197,6 +193,52 @@ const OfficialExam = () => {
     setShowHomePopup(false);
   };
 
+  const sendCertificateEligibility = async (percentScore, totalQuestions, correctCount) => {
+    try {
+      const token = getToken();
+      if (!token) return;
+      const res = await fetch(`${API_BASE}/api/certificate/eligibility`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          correct: correctCount,
+          total: Math.max(1, totalQuestions),
+          resultId: null
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        if (data?.isPassed) {
+          setCertificateNote('Đã ghi nhận đủ điều kiện cấp chứng chỉ.');
+        } else {
+          setCertificateNote('Kết quả chưa đạt điều kiện cấp chứng chỉ.');
+        }
+      } else {
+        // Fallback cho admin: tự tạo Results + upsert certificate
+        if (isAdmin) {
+          try {
+            const res2 = await fetch(`${API_BASE}/api/certificate/dev-pass`, {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            const data2 = await res2.json();
+            if (res2.ok) {
+              setCertificateNote('Đã ghi nhận đủ điều kiện cấp chứng chỉ.');
+              setCertificateApiError('');
+              return;
+            }
+          } catch {}
+        }
+        setCertificateApiError(data?.message || 'Không thể ghi nhận chứng chỉ.');
+      }
+    } catch (e) {
+      setCertificateApiError('Lỗi kết nối khi ghi nhận đủ điều kiện chứng chỉ.');
+    }
+  };
+
   const handleSubmit = () => {
     setIsSubmitted(true);
     let correctCount = 0;
@@ -208,6 +250,46 @@ const OfficialExam = () => {
     const finalScore = Math.round((correctCount / (questions.length || 1)) * 100);
     setScore(finalScore);
     setShowResult(true);
+
+    // Gọi API chứng chỉ nếu không bị hủy tư cách
+    if (!disqualified) {
+      sendCertificateEligibility(finalScore, questions.length || 0, correctCount);
+    }
+  };
+
+  const devMakeExamEasy = () => {
+    try {
+      if (!isAdmin) return;
+      setQuestions((prev) => {
+        const list = Array.isArray(prev) ? prev : [];
+        if (list.length === 0) return list;
+        const first = list[0];
+        const only = [first];
+        setAnswers({ [first.Id]: first.CorrectAnswer });
+        setCurrentQuestion(0);
+        setTimeLeft(10);
+        showChangeMessage('Dev: Đã bật chế độ dễ (1 câu, có đáp án).');
+        return only;
+      });
+    } catch {}
+  };
+
+  const devMarkPass = async () => {
+    try {
+      const user = getUser();
+      
+      if (!user || user.id !== 1) {
+        
+        return;
+      }
+      const total = questions ? questions.length : 0;
+      
+      await sendCertificateEligibility(100, total, total);
+      
+      window.location.href = '/certificate';
+    } catch (e) {
+      
+    }
   };
 
   if (loading) {
@@ -228,7 +310,8 @@ const OfficialExam = () => {
 
   if (showResult) {
     const correctAnswers = questions && questions.length > 0 ? questions.filter(q => answers[q.Id] === q.CorrectAnswer).length : 0;
-    const isPassed = !disqualified && score >= 80;
+    const wrong = (questions ? questions.length : 0) - correctAnswers;
+    const isPassed = !disqualified && wrong <= 3;
     return (
       <div className="practice-exam-container">
         <div className="practice-exam-background">
@@ -246,11 +329,18 @@ const OfficialExam = () => {
               <>
                 <div className="result-score">{score}/100 điểm</div>
                 <p className="result-description">Bạn trả lời đúng {correctAnswers}/{questions.length} câu</p>
+                {certificateNote && (<p className="result-description" style={{ color: '#10b981' }}>{certificateNote}</p>)}
+                {certificateApiError && (<p className="result-description" style={{ color: '#ef4444' }}>{certificateApiError}</p>)}
               </>
             )}
             <div className="result-buttons">
               <button onClick={() => window.location.reload()} className="result-button primary">Thi lại</button>
-              <button onClick={() => window.location.href = '/'} className="result-button secondary">Về trang chủ</button>
+              {isPassed && (
+                <button onClick={() => { window.location.href = '/certificate'; }} className="result-button secondary">Đến trang chứng chỉ</button>
+              )}
+              {!isPassed && (
+                <button onClick={() => window.location.href = '/'} className="result-button secondary">Về trang chủ</button>
+              )}
             </div>
           </div>
         </div>
@@ -279,17 +369,7 @@ const OfficialExam = () => {
         <DarkVeil speed={0.5} hueShift={0} noiseIntensity={0} scanlineIntensity={0} scanlineFrequency={0} warpAmount={0} resolutionScale={1} />
       </div>
 
-      <div className="practice-exam-header">
-        <div className="header-content">
-          <div className="header-brand" onClick={handleHeaderClick} style={{ cursor: 'pointer' }}>
-            <span className="header-logo">🚦</span>
-            <span className="header-title">Thi chứng nhận an toàn giao thông</span>
-          </div>
-          <div className="header-actions">
-            {/* <button className="feedback-button">Góp ý</button> */}
-          </div>
-        </div>
-      </div>
+      {/* Bỏ header phụ, dùng SiteHeader hiển thị tiêu đề giữa */}
 
       {showHomePopup && (
         <div className="home-popup-overlay">
@@ -348,6 +428,11 @@ const OfficialExam = () => {
               <div className="timer"><span>⏰</span><span>{formatTime(timeLeft)}</span></div>
             </div>
           </div>
+          {isAdmin && (
+            <div style={{ marginTop: 8, display:'flex', gap:8 }}>
+              <button className="nav-button" onClick={devMakeExamEasy}>Dev: Làm dễ</button>
+            </div>
+          )}
         </div>
 
         <div className="exam-grid">
@@ -433,6 +518,9 @@ const OfficialExam = () => {
               <button onClick={() => setCurrentQuestion(Math.max(0, currentQuestion - 1))} disabled={currentQuestion === 0} className="nav-button">← Trước</button>
               <div className="nav-button-group">
                 <button onClick={() => setCurrentQuestion(Math.min((questions ? questions.length : 0) - 1, currentQuestion + 1))} disabled={currentQuestion === (questions ? questions.length : 0) - 1} className="nav-button next">Sau →</button>
+                {getUser() && getUser().id === 1 && (
+                  <button onClick={devMarkPass} className="nav-button" title="Chỉ admin (ID=1)">Dev: Đậu</button>
+                )}
                 <button onClick={handleSubmit} disabled={isSubmitted} className="nav-button submit">Nộp bài</button>
               </div>
             </div>

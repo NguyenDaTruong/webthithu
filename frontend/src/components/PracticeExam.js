@@ -18,6 +18,8 @@ const PracticeExam = () => {
 
   // Load questions from API
   useEffect(() => {
+    // Đảm bảo vào trang sẽ ở đỉnh, tránh vị trí cuộn bị khôi phục gây che bởi header dính
+    try { window.scrollTo(0, 0); } catch {}
     const fetchQuestions = async () => {
       try {
         // Lấy tất cả câu hỏi từ database
@@ -295,21 +297,7 @@ const PracticeExam = () => {
         />
       </div>
 
-      {/* Header */}
-      <div className="practice-exam-header">
-        <div className="header-content">
-          <div className="header-brand" onClick={handleHeaderClick} style={{ cursor: 'pointer' }}>
-            <span className="header-logo">🚗</span>
-            <span className="header-title">Thi GPLX An Toàn Giao Thông</span>
-          </div>
-          
-          <div className="header-actions">
-            <button className="feedback-button">
-              Góp ý
-            </button>
-          </div>
-        </div>
-      </div>
+      {/* Bỏ header phụ, dùng SiteHeader hiển thị tiêu đề giữa */}
 
       {/* Popup xác nhận về homepage */}
       {showHomePopup && (

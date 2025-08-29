@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DarkVeil from '../components/DarkVeil';
-import { isLoggedIn, fetchProfile, uploadAvatar, API_BASE } from '../utils/auth';
+import { isLoggedIn, fetchProfile, uploadAvatar, API_BASE, updateProfileApi, getToken } from '../utils/auth';
 import '../styles/ProfilePage.css';
 
 const initialUser = {
@@ -58,10 +58,50 @@ const ProfilePage = () => {
     setForm((s) => ({ ...s, licenseScore: Number(value) }));
   };
 
-  const onSubmit = (e) => {
+  const [toast, setToast] = useState({ show: false, type: 'success', message: '' });
+  const [certLoading, setCertLoading] = useState(false);
+  const [certStatus, setCertStatus] = useState({ hasCertificate: false, certificate: null });
+
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, type, message });
+    setTimeout(() => setToast({ show: false, type: 'success', message: '' }), 2500);
+  };
+
+  const onSubmit = async (e) => {
     e.preventDefault();
-    // Tạm thời chỉ thông báo thành công
-    alert('✅ Cập nhật thông tin thành công!');
+    try {
+      const payload = {
+        username: form.username,
+        email: form.email,
+        fullName: form.fullName,
+        phone: form.phone,
+        dateOfBirth: form.dateOfBirth || null,
+        gender: form.gender,
+        address: form.address,
+        idCard: form.idCard
+      };
+      console.log('[ProfilePage] submit payload', payload);
+      const updated = await updateProfileApi(payload);
+      setForm({
+        username: updated.username || '',
+        email: updated.email || '',
+        role: updated.role || 'user',
+        fullName: updated.fullName || '',
+        phone: updated.phone || '',
+        dateOfBirth: updated.dateOfBirth ? String(updated.dateOfBirth).slice(0,10) : '',
+        gender: updated.gender || '',
+        idCard: updated.idCard || '',
+        address: updated.address || '',
+        licenseClass: updated.licenseClass || '',
+        licenseDate: updated.licenseDate ? String(updated.licenseDate).slice(0,10) : '',
+        licenseScore: Number(updated.licenseScore || 0)
+      });
+      setEditing(false);
+      showToast('Cập nhật thông tin thành công!', 'success');
+    } catch (err) {
+      console.error('[ProfilePage] update error', err);
+      showToast(err?.message || 'Cập nhật thất bại', 'error');
+    }
   };
 
   useEffect(() => {
@@ -98,12 +138,34 @@ const ProfilePage = () => {
       } else {
         setAvatarSrc('');
       }
+      // Load certificate status
+      try {
+        setCertLoading(true);
+        const res = await fetch(`${API_BASE}/api/certificate/status`, {
+          headers: { Authorization: `Bearer ${getToken()}` }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setCertStatus({ hasCertificate: Boolean(data?.hasCertificate), certificate: data?.certificate || null });
+        } else {
+          setCertStatus({ hasCertificate: false, certificate: null });
+        }
+      } catch (e) {
+        setCertStatus({ hasCertificate: false, certificate: null });
+      } finally {
+        setCertLoading(false);
+      }
     };
     load();
   }, [navigate]);
 
   return (
     <div className="profile-container">
+      {toast.show && (
+        <div style={{position:'fixed', top:16, right:16, zIndex:1000, background: toast.type==='success' ? 'rgba(16,185,129,0.95)' : 'rgba(239,68,68,0.95)', color:'#fff', padding:'10px 14px', borderRadius:8, boxShadow:'0 6px 20px rgba(0,0,0,0.2)'}}>
+          {toast.message}
+        </div>
+      )}
       <div className="profile-background">
         <DarkVeil
           speed={0.5}
@@ -292,23 +354,79 @@ const ProfilePage = () => {
             <div className="form-container">
               <div className="form-section">
                 <h2 className="section-title">Đổi mật khẩu</h2>
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>Mật khẩu hiện tại</label>
-                    <input type="password" placeholder="••••••" />
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  const currentPassword = e.target.currentPassword.value;
+                  const newPassword = e.target.newPassword.value;
+                  const confirmPassword = e.target.confirmPassword.value;
+                  
+                  if (newPassword !== confirmPassword) {
+                    showToast('Mật khẩu xác nhận không khớp', 'error');
+                    return;
+                  }
+                  
+                  if (newPassword.length < 6) {
+                    showToast('Mật khẩu mới phải có ít nhất 6 ký tự', 'error');
+                    return;
+                  }
+                  
+                  try {
+                    const response = await fetch(`${API_BASE}/api/auth/change-password`, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getToken()}`
+                      },
+                      body: JSON.stringify({ currentPassword, newPassword })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                      showToast('Đổi mật khẩu thành công!', 'success');
+                      e.target.reset();
+                    } else {
+                      showToast(data.message || 'Đổi mật khẩu thất bại', 'error');
+                    }
+                  } catch (error) {
+                    console.error('Change password error:', error);
+                    showToast('Lỗi kết nối server', 'error');
+                  }
+                }}>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>Mật khẩu hiện tại <span className="required">*</span></label>
+                      <input 
+                        type="password" 
+                        name="currentPassword"
+                        placeholder="••••••" 
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Mật khẩu mới <span className="required">*</span></label>
+                      <input 
+                        type="password" 
+                        name="newPassword"
+                        placeholder="Mật khẩu mới (tối thiểu 6 ký tự)" 
+                        required
+                        minLength={6}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Nhập lại mật khẩu mới <span className="required">*</span></label>
+                      <input 
+                        type="password" 
+                        name="confirmPassword"
+                        placeholder="Nhập lại mật khẩu" 
+                        required
+                      />
+                    </div>
                   </div>
-                  <div className="form-group">
-                    <label>Mật khẩu mới</label>
-                    <input type="password" placeholder="Mật khẩu mới" />
+                  <div className="btn-container">
+                    <button className="btn btn-primary" type="submit">🔐 Cập nhật mật khẩu</button>
                   </div>
-                  <div className="form-group">
-                    <label>Nhập lại mật khẩu mới</label>
-                    <input type="password" placeholder="Nhập lại mật khẩu" />
-                  </div>
-                </div>
-                <div className="btn-container">
-                  <button className="btn btn-primary" type="button">Cập nhật mật khẩu</button>
-                </div>
+                </form>
               </div>
             </div>
           )}
@@ -318,10 +436,41 @@ const ProfilePage = () => {
             <div className="form-container">
               <div className="form-section">
                 <h2 className="section-title">Chứng chỉ của bạn</h2>
-                <div style={{ color: '#cfcfe1' }}>
-                  {/* Placeholder: sẽ kết nối DB ở bước sau */}
-                  Chưa có chứng chỉ. Hãy thi thật và đạt đủ điểm để nhận chứng chỉ.
-                </div>
+                {certLoading ? (
+                  <div style={{ color:'#cfcfe1' }}>Đang tải trạng thái chứng chỉ...</div>
+                ) : certStatus.hasCertificate && certStatus.certificate ? (
+                  <div className="profile-summary">
+                    <div className="summary-grid">
+                      <div className="summary-item"><span className="label">Trạng thái</span><span className="value" style={{color:'#10b981'}}>Đã đạt</span></div>
+                      <div className="summary-item"><span className="label">Mã chứng chỉ</span><span className="value">CERT-{certStatus.certificate.Id || certStatus.certificate.id}</span></div>
+                      <div className="summary-item"><span className="label">Ngày cấp</span><span className="value">{certStatus.certificate.issuedAt ? String(certStatus.certificate.issuedAt).slice(0,10) : '-'}</span></div>
+                      <div className="summary-item"><span className="label">Kết quả</span><span className="value">{typeof certStatus.certificate.score === 'number' ? `${certStatus.certificate.score}/10` : '-'}</span></div>
+                    </div>
+                    <div className="btn-container" style={{ justifyContent: 'flex-end' }}>
+                      <button className="btn btn-primary" onClick={() => navigate('/certificate')}>Xem chứng chỉ</button>
+                      {form.role === 'admin' && (
+                        <button className="btn btn-secondary" onClick={async ()=>{
+                          try {
+                            const res = await fetch(`${API_BASE}/api/certificate/dev-reset`, { method: 'POST', headers: { Authorization: `Bearer ${getToken()}` } });
+                            if (res.ok) {
+                              setCertStatus({ hasCertificate: false, certificate: null });
+                              showToast('Đã reset chứng chỉ test', 'success');
+                            } else {
+                              const data = await res.json();
+                              showToast(data?.message || 'Không thể reset', 'error');
+                            }
+                          } catch (e) {
+                            showToast('Lỗi kết nối khi reset', 'error');
+                          }
+                        }}>Dev: Reset chứng chỉ</button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ color: '#cfcfe1' }}>
+                    Chưa có chứng chỉ. Hãy thi thật và đạt đủ điểm để nhận chứng chỉ.
+                  </div>
+                )}
               </div>
             </div>
           )}
