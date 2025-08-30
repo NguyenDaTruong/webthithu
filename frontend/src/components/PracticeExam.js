@@ -124,18 +124,32 @@ const PracticeExam = () => {
   const handleSubmit = () => {
     setIsSubmitted(true);
     
-    // Calculate score
+    // Calculate score và kiểm tra câu điểm liệt
     let correctCount = 0;
+    let criticalQuestionFailed = false;
+    let criticalQuestions = [];
+    
     if (questions && questions.length > 0) {
       questions.forEach(q => {
         if (answers[q.Id] === q.CorrectAnswer) {
           correctCount++;
+        } else if (q.IsCritical) {
+          // Nếu câu điểm liệt bị sai
+          criticalQuestionFailed = true;
+          criticalQuestions.push(q);
         }
       });
     }
     
     const finalScore = Math.round((correctCount / (questions ? questions.length : 1)) * 100);
     setScore(finalScore);
+    
+    // Kiểm tra câu điểm liệt trước khi xét điểm
+    if (criticalQuestionFailed) {
+      // Nếu có câu điểm liệt sai, thi trượt ngay lập tức
+      setScore(0);
+    }
+    
     setShowResult(true);
   };
 
@@ -184,7 +198,8 @@ const PracticeExam = () => {
 
   if (showResult) {
     const correctAnswers = questions && questions.length > 0 ? questions.filter(q => answers[q.Id] === q.CorrectAnswer).length : 0;
-    const isPassed = score >= 80;
+    const criticalQuestionsFailed = questions && questions.length > 0 ? questions.filter(q => q.IsCritical && answers[q.Id] !== q.CorrectAnswer) : [];
+    const isPassed = score >= 80 && criticalQuestionsFailed.length === 0;
     
     return (
       <div className="practice-exam-container">
@@ -228,6 +243,24 @@ const PracticeExam = () => {
             <p className="result-description">
               Bạn trả lời đúng {correctAnswers}/{questions ? questions.length : 0} câu
             </p>
+            
+            {/* Hiển thị thông tin câu điểm liệt */}
+            {criticalQuestionsFailed.length > 0 && (
+              <div className="critical-warning">
+                <div className="critical-icon">🚨</div>
+                <div className="critical-text">
+                  <strong>Bài thi không đạt do sai câu điểm liệt!</strong><br/>
+                  Bạn đã sai {criticalQuestionsFailed.length} câu điểm liệt:
+                  <ul>
+                    {criticalQuestionsFailed.map((q, index) => (
+                      <li key={index}>
+                        Câu {questions.findIndex(question => question.Id === q.Id) + 1}: {q.QuestionText?.substring(0, 50)}...
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
             
             <div className="result-buttons">
               <button 
@@ -399,6 +432,12 @@ const PracticeExam = () => {
             <div className="question-header">
               <h3 className="question-title">
                 Câu {currentQuestion + 1}:
+                {/* Icon câu điểm liệt */}
+                {currentQ && currentQ.IsCritical && (
+                  <span className="critical-question-icon" title="Câu điểm liệt - Nếu sai sẽ không đạt bài thi">
+                    🚨
+                  </span>
+                )}
               </h3>
                
               <p className="question-text">

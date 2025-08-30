@@ -67,6 +67,15 @@ const SiteHeader = () => {
           <button className="header-cta" onClick={goLogin}>Đăng nhập</button>
         ) : (
           <div style={{ display: 'flex', gap: 8 }}>
+            {user?.role === 'admin' && (
+              <button 
+                className="header-cta admin-btn" 
+                onClick={() => navigate('/admin')}
+                style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+              >
+                🔐 Admin
+              </button>
+            )}
             <button className="header-cta" onClick={goProfile}>👤 {user?.fullName || 'Hồ sơ'}</button>
             <button className="header-cta" onClick={doLogout}>⎋ Đăng xuất</button>
           </div>

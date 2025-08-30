@@ -5,6 +5,7 @@ const { connectDB } = require('./config/db');
 const questionRoutes = require('./routes/questionRoutes');
 const authRoutes = require('./routes/authRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 
@@ -35,6 +36,7 @@ app.use('/uploads', express.static(uploadsDir));
 app.use('/api/questions', questionRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/certificate', certificateRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.listen(process.env.PORT || 5000, () => {
   

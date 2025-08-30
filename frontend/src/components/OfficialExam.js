@@ -242,17 +242,35 @@ const OfficialExam = () => {
   const handleSubmit = () => {
     setIsSubmitted(true);
     let correctCount = 0;
+    let criticalQuestionFailed = false;
+    let criticalQuestions = [];
+    
     if (questions && questions.length > 0) {
       questions.forEach(q => {
-        if (answers[q.Id] === q.CorrectAnswer) correctCount++;
+        if (answers[q.Id] === q.CorrectAnswer) {
+          correctCount++;
+        } else if (q.IsCritical) {
+          // Nếu câu điểm liệt bị sai
+          criticalQuestionFailed = true;
+          criticalQuestions.push(q);
+        }
       });
     }
+    
     const finalScore = Math.round((correctCount / (questions.length || 1)) * 100);
-    setScore(finalScore);
+    
+    // Kiểm tra câu điểm liệt trước khi xét điểm
+    if (criticalQuestionFailed) {
+      // Nếu có câu điểm liệt sai, thi trượt ngay lập tức
+      setScore(0);
+    } else {
+      setScore(finalScore);
+    }
+    
     setShowResult(true);
 
-    // Gọi API chứng chỉ nếu không bị hủy tư cách
-    if (!disqualified) {
+    // Gọi API chứng chỉ nếu không bị hủy tư cách và không sai câu điểm liệt
+    if (!disqualified && !criticalQuestionFailed) {
       sendCertificateEligibility(finalScore, questions.length || 0, correctCount);
     }
   };
@@ -311,7 +329,8 @@ const OfficialExam = () => {
   if (showResult) {
     const correctAnswers = questions && questions.length > 0 ? questions.filter(q => answers[q.Id] === q.CorrectAnswer).length : 0;
     const wrong = (questions ? questions.length : 0) - correctAnswers;
-    const isPassed = !disqualified && wrong <= 3;
+    const criticalQuestionsFailed = questions && questions.length > 0 ? questions.filter(q => q.IsCritical && answers[q.Id] !== q.CorrectAnswer) : [];
+    const isPassed = !disqualified && wrong <= 3 && criticalQuestionsFailed.length === 0;
     return (
       <div className="practice-exam-container">
         <div className="practice-exam-background">
@@ -329,6 +348,25 @@ const OfficialExam = () => {
               <>
                 <div className="result-score">{score}/100 điểm</div>
                 <p className="result-description">Bạn trả lời đúng {correctAnswers}/{questions.length} câu</p>
+                
+                {/* Hiển thị thông tin câu điểm liệt */}
+                {criticalQuestionsFailed.length > 0 && (
+                  <div className="critical-warning">
+                    <div className="critical-icon">🚨</div>
+                    <div className="critical-text">
+                      <strong>Bài thi không đạt do sai câu điểm liệt!</strong><br/>
+                      Bạn đã sai {criticalQuestionsFailed.length} câu điểm liệt:
+                      <ul>
+                        {criticalQuestionsFailed.map((q, index) => (
+                          <li key={index}>
+                            Câu {questions.findIndex(question => question.Id === q.Id) + 1}: {q.QuestionText?.substring(0, 50)}...
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+                
                 {certificateNote && (<p className="result-description" style={{ color: '#10b981' }}>{certificateNote}</p>)}
                 {certificateApiError && (<p className="result-description" style={{ color: '#ef4444' }}>{certificateApiError}</p>)}
               </>
@@ -468,7 +506,15 @@ const OfficialExam = () => {
 
           <div className="question-content">
             <div className="question-header">
-              <h3 className="question-title">Câu {currentQuestion + 1}:</h3>
+              <h3 className="question-title">
+                Câu {currentQuestion + 1}:
+                {/* Icon câu điểm liệt */}
+                {currentQ && currentQ.IsCritical && (
+                  <span className="critical-question-icon" title="Câu điểm liệt - Nếu sai sẽ không đạt bài thi">
+                    🚨
+                  </span>
+                )}
+              </h3>
               <p className="question-text">{currentQ ? currentQ.QuestionText : 'Đang tải câu hỏi...'}</p>
 
               <div className="answer-options">

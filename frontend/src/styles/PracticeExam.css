@@ -817,6 +817,73 @@
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   z-index: 1001;
+}
+
+/* Critical Question Styles */
+.critical-question-icon {
+  display: inline-block;
+  margin-left: 12px;
+  font-size: 1.2rem;
+  animation: pulse 2s infinite;
+  cursor: help;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.critical-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 12px;
+  margin: 20px 0;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.critical-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.critical-text {
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.6;
+}
+
+.critical-text strong {
+  color: #ef4444;
+  font-size: 1.1rem;
+}
+
+.critical-text ul {
+  margin: 10px 0 0 20px;
+  padding: 0;
+}
+
+.critical-text li {
+  margin: 8px 0;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.change-notification {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  padding: 16px 24px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(245, 158, 11, 0.3);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 1001;
   font-weight: 500;
   font-size: 0.95rem;
   max-width: 300px;

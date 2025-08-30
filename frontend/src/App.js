@@ -7,6 +7,7 @@ import CertificatePage from './pages/CertificatePage';
 import AuthPage from './pages/AuthPage';
 import ProfilePage from './pages/ProfilePage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import AdminDashboard from './pages/AdminDashboard';
 import SiteHeader from './components/SiteHeader.jsx';
 import CardNav from './components/CardNav';
 
@@ -52,6 +53,7 @@ function App() {
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/admin" element={<AdminDashboard />} />
       </Routes>
     </Router>
   );

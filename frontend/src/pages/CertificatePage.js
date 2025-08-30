@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import DarkVeil from '../components/DarkVeil';
 import '../styles/CertificatePage.css';
 import { API_BASE, getToken, getUser } from '../utils/auth';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 const CertificatePage = () => {
   const certificateRef = useRef(null);
@@ -165,39 +167,62 @@ const CertificatePage = () => {
     setIsLoading(true);
     
     try {
-      // Sử dụng html2canvas và jsPDF để tạo PDF
-      const html2canvas = (await import('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js')).default;
-      const { jsPDF } = await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-
       const element = certificateRef.current;
-      if (!element) return;
+      if (!element) {
+        throw new Error('Không tìm thấy element chứng chỉ');
+      }
 
-      // Capture the certificate as canvas
-      const canvas = await html2canvas(element, {
-        scale: 2,
+      // Tạo một clone của element để tối ưu cho PDF
+      const clone = element.cloneNode(true);
+      clone.style.transform = 'none';
+      clone.style.scale = '1';
+      clone.style.width = '280mm';
+      clone.style.height = '200mm';
+      clone.style.position = 'absolute';
+      clone.style.left = '-9999px';
+      clone.style.top = '0';
+      document.body.appendChild(clone);
+
+      // Capture the certificate as canvas với settings tối ưu
+      const canvas = await html2canvas(clone, {
+        scale: 3, // Tăng scale để PDF sắc nét hơn
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
-        width: element.offsetWidth,
-        height: element.offsetHeight
+        width: 280 * 3.779527559, // Convert mm to pixels (1mm = 3.779527559px)
+        height: 200 * 3.779527559,
+        logging: false,
+        removeContainer: true
       });
 
-      // Create PDF
+      // Xóa clone element
+      document.body.removeChild(clone);
+
+      // Create PDF với dimensions chính xác
       const pdf = new jsPDF({
-        orientation: 'portrait',
+        orientation: 'landscape', // Sử dụng landscape để fit certificate
         unit: 'mm',
-        format: 'a4'
+        format: [280, 200] // Custom size phù hợp với certificate
       });
-      const imgData = canvas.toDataURL('image/png');
-      const imgWidth = 210; // A4 portrait width in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      const imgData = canvas.toDataURL('image/png', 1.0);
+      
+      // Tính toán vị trí để center image trong PDF
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = pdfWidth;
+      const imgHeight = pdfHeight;
+      
+      // Center image trong PDF
+      const x = (pdfWidth - imgWidth) / 2;
+      const y = (pdfHeight - imgHeight) / 2;
+      
+      pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
       pdf.save(`traffic-safety-certificate-${certificateData.certificateNumber}.pdf`);
       
     } catch (error) {
-      
-      alert('Có lỗi xảy ra khi tạo PDF. Vui lòng thử lại.');
+      console.error('PDF generation error:', error);
+      alert(`Có lỗi xảy ra khi tạo PDF: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
