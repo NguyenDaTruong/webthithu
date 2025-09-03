@@ -2,51 +2,57 @@ import React, { useState, useEffect } from 'react';
 import DarkVeil from '../components/DarkVeil';
 import SplitText from '../components/SplitText';
 import TextType from '../components/TextType';
+import ExamGenerator from './ExamGenerator';
 import '../styles/PracticeExam.css';
 
 const PracticeExam = () => {
   const [questions, setQuestions] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(10 * 60); // 10 minutes for 10 questions
+  const [timeLeft, setTimeLeft] = useState(0);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [score, setScore] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [showExplanation, setShowExplanation] = useState({}); // Hiển thị giải thích cho từng câu hỏi
-  const [showHomePopup, setShowHomePopup] = useState(false); // Hiển thị popup xác nhận về homepage
+  const [loading, setLoading] = useState(false);
+  const [showExplanation, setShowExplanation] = useState({});
+  const [showHomePopup, setShowHomePopup] = useState(false);
+  const [examConfig, setExamConfig] = useState(null);
+  const [showExamGenerator, setShowExamGenerator] = useState(true);
 
-  // Load questions from API
-  useEffect(() => {
-    // Đảm bảo vào trang sẽ ở đỉnh, tránh vị trí cuộn bị khôi phục gây che bởi header dính
-    try { window.scrollTo(0, 0); } catch {}
-    const fetchQuestions = async () => {
-      try {
-        // Lấy tất cả câu hỏi từ database
-        const response = await fetch('http://localhost:5000/api/questions');
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json();
-        console.log('Loaded questions:', data ? data.length : 0);
-        setQuestions(data || []);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error loading questions:', error);
-        setQuestions([]);
-        setLoading(false);
-      }
-    };
-    
-    fetchQuestions();
-  }, []);
+  // Xử lý khi đề thi được tạo
+  const handleExamCreated = (exam) => {
+    setQuestions(exam.questions || []);
+    setTimeLeft(exam.timeLimit || 600); // 10 phút mặc định
+    setCurrentQuestion(0);
+    setAnswers({});
+    setIsSubmitted(false);
+    setShowResult(false);
+    setScore(0);
+    setShowExplanation({});
+    setExamConfig(exam);
+    setShowExamGenerator(false);
+  };
+
+  // Reset để tạo đề thi mới
+  const handleCreateNewExam = () => {
+    setShowExamGenerator(true);
+    setQuestions([]);
+    setExamConfig(null);
+    setTimeLeft(0);
+    setCurrentQuestion(0);
+    setAnswers({});
+    setIsSubmitted(false);
+    setShowResult(false);
+    setScore(0);
+    setShowExplanation({});
+  };
 
   // Timer countdown
   useEffect(() => {
     if (timeLeft > 0 && !isSubmitted && questions && questions.length > 0) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && !isSubmitted) {
+    } else if (timeLeft === 0 && !isSubmitted && questions && questions.length > 0) {
       handleSubmit();
     }
   }, [timeLeft, isSubmitted, questions]);
@@ -170,6 +176,53 @@ const PracticeExam = () => {
     return `Đáp án đúng là ${question.CorrectAnswer}: ${optionText}. Hãy đọc kỹ câu hỏi và các lựa chọn để hiểu rõ hơn về quy tắc giao thông.`;
   };
 
+  // Hiển thị ExamGenerator nếu chưa có đề thi
+  if (showExamGenerator) {
+    return (
+      <div className="practice-exam-container">
+        <div className="practice-exam-background">
+          <DarkVeil
+            speed={0.5}
+            hueShift={0}
+            noiseIntensity={0}
+            scanlineIntensity={0}
+            scanlineFrequency={0}
+            warpAmount={0}
+            resolutionScale={1}
+          />
+        </div>
+        
+        <div className="main-content">
+          <div className="exam-header">
+            <div className="exam-header-content">
+              <div>
+                <TextType
+                  text={[
+                    'Thi thử - Tạo đề thi tùy chỉnh',
+                    'Tùy chỉnh cấu hình đề thi theo ý muốn'
+                  ]}
+                  className="exam-title"
+                  typingSpeed={75}
+                  initialDelay={500}
+                  pauseDuration={1000}
+                  deletingSpeed={50}
+                  loop={true}
+                  showCursor={true}
+                  cursorCharacter="|"
+                />
+              </div>
+            </div>
+          </div>
+
+          <ExamGenerator 
+            onExamCreated={handleExamCreated}
+            examType="practice"
+          />
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="practice-exam-container">
@@ -243,6 +296,17 @@ const PracticeExam = () => {
             <p className="result-description">
               Bạn trả lời đúng {correctAnswers}/{questions ? questions.length : 0} câu
             </p>
+
+            {/* Hiển thị thông tin đề thi */}
+            {examConfig && (
+              <div className="exam-info-display">
+                <p><strong>📊 Thông tin đề thi:</strong></p>
+                <p>• Số câu hỏi: {examConfig.totalQuestions}</p>
+                <p>• Câu điểm liệt: {examConfig.criticalQuestions}</p>
+                <p>• Hạng bằng: {examConfig.category}</p>
+                <p>• Thời gian: {Math.floor(examConfig.timeLimit / 60)} phút</p>
+              </div>
+            )}
             
             {/* Hiển thị thông tin câu điểm liệt */}
             {criticalQuestionsFailed.length > 0 && (
@@ -264,10 +328,10 @@ const PracticeExam = () => {
             
             <div className="result-buttons">
               <button 
-                onClick={() => window.location.reload()}
+                onClick={handleCreateNewExam}
                 className="result-button primary"
               >
-                Thi lại
+                🎯 Tạo đề thi mới
               </button>
               <button 
                 onClick={() => window.location.href = '/'}
@@ -329,8 +393,6 @@ const PracticeExam = () => {
           resolutionScale={1}
         />
       </div>
-
-      {/* Bỏ header phụ, dùng SiteHeader hiển thị tiêu đề giữa */}
 
       {/* Popup xác nhận về homepage */}
       {showHomePopup && (

@@ -1,14 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
 import DarkVeil from '../components/DarkVeil';
 import TextType from '../components/TextType';
-import '../styles/PracticeExam.css';
+import '../styles/OfficialExam.css';
 import { API_BASE, getToken, getUser } from '../utils/auth';
 
 const OfficialExam = () => {
   const [questions, setQuestions] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(10 * 60);
+  const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 phút
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [score, setScore] = useState(0);
@@ -18,9 +18,10 @@ const OfficialExam = () => {
   const [violationsCount, setViolationsCount] = useState(0);
   const [disqualified, setDisqualified] = useState(false);
   const [isWaitingForSecondViolation, setIsWaitingForSecondViolation] = useState(false);
+  const [examConfig, setExamConfig] = useState(null);
   
   // Thêm state cho việc sửa đáp án
-  const [answerChanges, setAnswerChanges] = useState({}); // Lưu số lần sửa cho từng câu hỏi
+  const [answerChanges, setAnswerChanges] = useState({});
   const [showChangeNotification, setShowChangeNotification] = useState(false);
   const [changeMessage, setChangeMessage] = useState('');
   const [changeTimeout, setChangeTimeout] = useState(null);
@@ -32,32 +33,124 @@ const OfficialExam = () => {
 
   // Sử dụng useRef để lưu trạng thái trang (không bị reset khi re-render)
   const isPageHiddenRef = useRef(false);
+
+  // Tự động tạo đề thi mặc định khi component mount (thi thật)
+  useEffect(() => {
+    createDefaultOfficialExam();
+  }, []);
+
+  // Tạo đề thi mặc định cho thi thật
+  const createDefaultOfficialExam = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE}/api/questions/create-default-exam?examType=official`);
+      const data = await response.json();
+
+      if (response.ok && data.success && data.exam) {
+        handleExamCreated(data.exam);
+      } else {
+        console.error('Không thể tạo đề thi mặc định:', data.error);
+        // Fallback: tạo đề thi với cấu hình cơ bản
+        const fallbackExam = {
+          questions: [],
+          timeLimit: 1800, // 30 phút
+          examType: 'official',
+          questionCount: 35,
+          category: 'AnToanGiaoThong'
+        };
+        handleExamCreated(fallbackExam);
+      }
+    } catch (err) {
+      console.error('Lỗi tạo đề thi mặc định:', err);
+      // Fallback: tạo đề thi với cấu hình cơ bản
+      const fallbackExam = {
+        questions: [],
+        timeLimit: 1800, // 30 phút
+        examType: 'official',
+        questionCount: 35,
+        category: 'AnToanGiaoThong'
+      };
+      handleExamCreated(fallbackExam);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Xử lý khi đề thi được tạo
+  const handleExamCreated = (exam) => {
+    setQuestions(exam.questions || []);
+    setTimeLeft(exam.timeLimit || 1800); // 30 phút mặc định cho thi thật
+    setCurrentQuestion(0);
+    setAnswers({});
+    setIsSubmitted(false);
+    setShowResult(false);
+    setScore(0);
+    setAnswerChanges({});
+    setExamConfig(exam);
+    setDisqualified(false);
+    setViolationsCount(0);
+    // Reset anti-cheat state
+    isPageHiddenRef.current = false;
+  };
+
+  // Reset để tạo đề thi mới
+  const handleCreateNewExam = () => {
+    createDefaultOfficialExam();
+  };
   
   useEffect(() => {
     // Vào trang thi thật, đảm bảo cuộn lên đầu trang để không bị header dính che
     try { window.scrollTo(0, 0); } catch {}
-    const fetchQuestions = async () => {
-      try {
-        const res = await fetch('http://localhost:5000/api/questions');
-        const data = await res.json();
-        setQuestions(data);
-      } catch (e) {
-        // Error loading questions
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchQuestions();
   }, []);
 
   useEffect(() => {
     if (timeLeft > 0 && !isSubmitted && questions.length > 0) {
       const timer = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (timeLeft === 0 && !isSubmitted) {
+    } else if (timeLeft === 0 && !isSubmitted && questions.length > 0) {
       handleSubmit();
     }
   }, [timeLeft, isSubmitted, questions.length]);
+
+  // ANTI-CHEAT: Phát hiện khi người dùng rời trang
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.hidden && !isPageHiddenRef.current && !disqualified && !isSubmitted) {
+        // Chỉ xử lý khi thực sự rời trang lần đầu
+        isPageHiddenRef.current = true;
+        registerViolation();
+      } else if (!document.hidden) {
+        // Reset khi quay lại trang
+        isPageHiddenRef.current = false;
+      }
+    };
+    
+    const onBlur = () => {
+      if (!document.hidden && !isPageHiddenRef.current && !disqualified && !isSubmitted && !showAntiCheatPopup) {
+        isPageHiddenRef.current = true;
+        registerViolation();
+      }
+    };
+    
+    const onFocus = () => {
+      if (!disqualified && !isSubmitted && !showAntiCheatPopup) {
+        isPageHiddenRef.current = false;
+      }
+    };
+    
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('blur', onBlur);
+    window.addEventListener('focus', onFocus);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('blur', onBlur);
+      window.removeEventListener('focus', onFocus);
+      if (changeTimeout) {
+        clearTimeout(changeTimeout);
+      }
+    };
+  }, [violationsCount, disqualified, isSubmitted, showAntiCheatPopup]);
 
   // Hiển thị thông báo sửa đáp án
   const showChangeMessage = (message) => {
@@ -79,12 +172,16 @@ const OfficialExam = () => {
       return;
     }
     
+    console.log('Registering violation. Current count:', violationsCount);
+    
     // Phạt ngay khi rời trang
     if (violationsCount === 0) {
+      console.log('First violation - Setting count to 1');
       setViolationsCount(1);
       setShowAntiCheatPopup(true);
       setIsWaitingForSecondViolation(true);
     } else {
+      console.log('Second violation - Disqualifying');
       setDisqualified(true);
       setShowAntiCheatPopup(false);
       setIsSubmitted(true);
@@ -95,290 +192,275 @@ const OfficialExam = () => {
   };
 
   const handleAntiCheatPopupClose = () => {
+    console.log('Anti-cheat popup closed. Resetting isPageHiddenRef');
     // Reset isPageHiddenRef để có thể phát hiện lần vi phạm thứ 2
     isPageHiddenRef.current = false;
     setShowAntiCheatPopup(false);
+    setIsWaitingForSecondViolation(false);
   };
 
-  useEffect(() => {
-    const onVisibility = () => {
-      if (document.hidden && !isPageHiddenRef.current) {
-        // Chỉ xử lý khi thực sự rời trang lần đầu
-        isPageHiddenRef.current = true;
-        registerViolation();
-      } else if (!document.hidden) {
-        // Reset khi quay lại trang
-        isPageHiddenRef.current = false;
-      }
-    };
-    
-    const onBlur = () => {
-      if (!document.hidden && !isPageHiddenRef.current && !disqualified && !showAntiCheatPopup) {
-        isPageHiddenRef.current = true;
-        registerViolation();
-      }
-    };
-    
-    const onFocus = () => {
-      if (!disqualified && !showAntiCheatPopup) {
-        isPageHiddenRef.current = false;
-      }
-    };
-    
-    document.addEventListener('visibilitychange', onVisibility);
-    window.addEventListener('blur', onBlur);
-    window.addEventListener('focus', onFocus);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', onVisibility);
-      window.removeEventListener('blur', onBlur);
-      window.removeEventListener('focus', onFocus);
-      if (changeTimeout) {
-        clearTimeout(changeTimeout);
-      }
-    };
-  }, [violationsCount, disqualified, isSubmitted, showAntiCheatPopup]);
+  // Xử lý khi người dùng thay đổi đáp án (THI THẬT: giới hạn 3 lần)
+  const handleAnswerChange = (questionId, newAnswer) => {
+    if (isSubmitted || disqualified) return;
 
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const handleAnswerSelect = (questionId, answer) => {
     const currentAnswer = answers[questionId];
     const currentChanges = answerChanges[questionId] || 0;
-    
-    // Nếu chọn đáp án mới
-    if (currentAnswer !== answer) {
-      // Nếu đây là lần chọn đầu tiên, không tính là sửa
-      if (currentAnswer === undefined) {
-        setAnswers(prev => ({ ...prev, [questionId]: answer }));
-        return;
-      }
-      
-      // Từ lần thứ 2 trở đi mới tính là sửa đáp án
+
+    // Kiểm tra xem có phải là lần thay đổi đầu tiên không
+    if (currentAnswer !== undefined && currentAnswer !== newAnswer) {
       if (currentChanges >= 3) {
-        showChangeMessage('Bạn đã hết lượt sửa đáp án cho câu hỏi này!');
+        showChangeMessage('Bạn đã hết lượt thay đổi đáp án cho câu hỏi này!');
         return;
       }
       
-      // Cập nhật đáp án
-      setAnswers(prev => ({ ...prev, [questionId]: answer }));
+      // Cập nhật số lần thay đổi
+      setAnswerChanges(prev => ({
+        ...prev,
+        [questionId]: currentChanges + 1
+      }));
       
-      // Tăng số lần sửa
-      const newChanges = currentChanges + 1;
-      setAnswerChanges(prev => ({ ...prev, [questionId]: newChanges }));
-      
-      // Hiển thị thông báo
-      const remainingChanges = 3 - newChanges;
-      if (remainingChanges > 0) {
-        showChangeMessage(`Bạn còn ${remainingChanges} lần thay đổi đáp án cho câu hỏi này`);
-      } else {
-        showChangeMessage('Bạn đã hết lượt thay đổi đáp án cho câu hỏi này!');
-      }
+      showChangeMessage(`Bạn đã thay đổi đáp án lần thứ ${currentChanges + 1}/3`);
     }
-  };
 
-  const handleHeaderClick = () => {
-    setShowHomePopup(true);
-  };
-
-  const handleConfirmHome = () => {
-    setShowHomePopup(false);
-    window.location.href = '/';
-  };
-
-  const handleCancelHome = () => {
-    setShowHomePopup(false);
-  };
-
-  const sendCertificateEligibility = async (percentScore, totalQuestions, correctCount) => {
-    try {
-      const token = getToken();
-      if (!token) return;
-      const res = await fetch(`${API_BASE}/api/certificate/eligibility`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          correct: correctCount,
-          total: Math.max(1, totalQuestions),
-          resultId: null
-        })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        if (data?.isPassed) {
-          setCertificateNote('Đã ghi nhận đủ điều kiện cấp chứng chỉ.');
-        } else {
-          setCertificateNote('Kết quả chưa đạt điều kiện cấp chứng chỉ.');
-        }
-      } else {
-        // Fallback cho admin: tự tạo Results + upsert certificate
-        if (isAdmin) {
-          try {
-            const res2 = await fetch(`${API_BASE}/api/certificate/dev-pass`, {
-              method: 'POST',
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            const data2 = await res2.json();
-            if (res2.ok) {
-              setCertificateNote('Đã ghi nhận đủ điều kiện cấp chứng chỉ.');
-              setCertificateApiError('');
-              return;
-            }
-          } catch {}
-        }
-        setCertificateApiError(data?.message || 'Không thể ghi nhận chứng chỉ.');
-      }
-    } catch (e) {
-      setCertificateApiError('Lỗi kết nối khi ghi nhận đủ điều kiện chứng chỉ.');
-    }
+    // Cập nhật đáp án
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: newAnswer
+    }));
   };
 
   const handleSubmit = () => {
+    if (isSubmitted || disqualified) return;
+    
     setIsSubmitted(true);
-    let correctCount = 0;
-    let criticalQuestionFailed = false;
-    let criticalQuestions = [];
     
-    if (questions && questions.length > 0) {
-      questions.forEach(q => {
-        if (answers[q.Id] === q.CorrectAnswer) {
-          correctCount++;
-        } else if (q.IsCritical) {
-          // Nếu câu điểm liệt bị sai
-          criticalQuestionFailed = true;
-          criticalQuestions.push(q);
+    // Tính điểm
+    let correctAnswers = 0;
+    let criticalCorrect = 0;
+    let totalCritical = 0;
+    
+    questions.forEach((question, index) => {
+      const userAnswer = answers[index];
+      const correctAnswer = question.CorrectAnswer;
+      
+      if (userAnswer === correctAnswer) {
+        correctAnswers++;
+        if (question.IsCritical === 1) {
+          criticalCorrect++;
         }
-      });
-    }
+      }
+      
+      if (question.IsCritical === 1) {
+        totalCritical++;
+      }
+    });
     
-    const finalScore = Math.round((correctCount / (questions.length || 1)) * 100);
+    const finalScore = Math.round((correctAnswers / questions.length) * 100);
+    setScore(finalScore);
     
-    // Kiểm tra câu điểm liệt trước khi xét điểm
-    if (criticalQuestionFailed) {
-      // Nếu có câu điểm liệt sai, thi trượt ngay lập tức
-      setScore(0);
-    } else {
-      setScore(finalScore);
+    // Kiểm tra điều kiện đỗ
+    const isPassed = finalScore >= 80 && criticalCorrect === totalCritical;
+    
+    // Nếu đỗ, gửi kết quả lên server để lưu chứng chỉ
+    if (isPassed) {
+      saveCertificateResult(finalScore, correctAnswers, questions.length, criticalCorrect, totalCritical);
     }
     
     setShowResult(true);
-
-    // Gọi API chứng chỉ nếu không bị hủy tư cách và không sai câu điểm liệt
-    if (!disqualified && !criticalQuestionFailed) {
-      sendCertificateEligibility(finalScore, questions.length || 0, correctCount);
-    }
   };
 
-  const devMakeExamEasy = () => {
+  const saveCertificateResult = async (finalScore, correctAnswers, totalQuestions, criticalCorrect, totalCritical) => {
     try {
-      if (!isAdmin) return;
-      setQuestions((prev) => {
-        const list = Array.isArray(prev) ? prev : [];
-        if (list.length === 0) return list;
-        const first = list[0];
-        const only = [first];
-        setAnswers({ [first.Id]: first.CorrectAnswer });
-        setCurrentQuestion(0);
-        setTimeLeft(10);
-        showChangeMessage('Dev: Đã bật chế độ dễ (1 câu, có đáp án).');
-        return only;
-      });
-    } catch {}
-  };
-
-  const devMarkPass = async () => {
-    try {
-      const user = getUser();
-      
-      if (!user || user.id !== 1) {
-        
+      const token = getToken();
+      if (!token) {
+        console.error('Không có token để lưu kết quả');
         return;
       }
-      const total = questions ? questions.length : 0;
+
+      const response = await fetch(`${API_BASE}/api/certificates/save-result`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          score: finalScore,
+          correctAnswers,
+          totalQuestions,
+          criticalCorrect,
+          totalCritical,
+          examType: 'official',
+          examDate: new Date().toISOString()
+        })
+      });
+
+      const data = await response.json();
       
-      await sendCertificateEligibility(100, total, total);
-      
-      window.location.href = '/certificate';
-    } catch (e) {
-      
+      if (response.ok && data.success) {
+        setCertificateNote(data.message || 'Kết quả đã được lưu thành công!');
+      } else {
+        setCertificateApiError(data.error || 'Không thể lưu kết quả');
+      }
+    } catch (err) {
+      console.error('Lỗi khi lưu kết quả:', err);
+      setCertificateApiError('Lỗi kết nối khi lưu kết quả');
     }
+  };
+
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const getQuestionStatus = (index) => {
+    if (!questions || !questions[index]) return 'unanswered';
+    
+    // THI THẬT: Chỉ hiển thị trạng thái đã làm/chưa làm, không hiển thị đúng/sai
+    if (answers[index]) {
+      return 'answered';
+    }
+    return 'unanswered';
   };
 
   if (loading) {
     return (
-      <div className="practice-exam-container">
-        <div className="practice-exam-background">
-          <DarkVeil speed={0.5} hueShift={0} noiseIntensity={0} scanlineIntensity={0} scanlineFrequency={0} warpAmount={0} resolutionScale={1} />
+      <div className="official-exam-container">
+        <div className="official-exam-background">
+          <DarkVeil
+            speed={0.5}
+            hueShift={0}
+            noiseIntensity={0}
+            scanlineIntensity={0}
+            scanlineFrequency={0}
+            warpAmount={0}
+            resolutionScale={1}
+          />
         </div>
+        
         <div className="loading-container">
-          <div style={{ textAlign: 'center' }}>
-            <div className="loading-spinner"></div>
-            <p className="loading-text">Đang tải câu hỏi...</p>
-          </div>
+          <div className="loading-spinner"></div>
+          <p className="loading-text">Đang tạo đề thi...</p>
         </div>
       </div>
     );
   }
 
   if (showResult) {
-    const correctAnswers = questions && questions.length > 0 ? questions.filter(q => answers[q.Id] === q.CorrectAnswer).length : 0;
-    const wrong = (questions ? questions.length : 0) - correctAnswers;
-    const criticalQuestionsFailed = questions && questions.length > 0 ? questions.filter(q => q.IsCritical && answers[q.Id] !== q.CorrectAnswer) : [];
-    const isPassed = !disqualified && wrong <= 3 && criticalQuestionsFailed.length === 0;
-    return (
-      <div className="practice-exam-container">
-        <div className="practice-exam-background">
-          <DarkVeil speed={0.5} hueShift={0} noiseIntensity={0} scanlineIntensity={0} scanlineFrequency={0} warpAmount={0} resolutionScale={1} />
+    const correctAnswers = Object.keys(answers).filter(key => 
+      answers[key] === questions[parseInt(key)]?.CorrectAnswer
+    ).length;
+    
+    // Nếu bị loại thì hiển thị thông báo bị hủy tư cách
+    if (disqualified) {
+      return (
+        <div className="official-exam-container">
+          <div className="official-exam-background">
+            <DarkVeil
+              speed={0.5}
+              hueShift={0}
+              noiseIntensity={0}
+              scanlineIntensity={0}
+              scanlineFrequency={0}
+              warpAmount={0}
+              resolutionScale={1}
+            />
+          </div>
+          
+          <div className="result-container">
+            <div className="result-card">
+              <div className="result-icon failed">
+                ❌
+              </div>
+              <h2 className="result-title">
+                Bạn đã bị hủy tư cách thi!
+              </h2>
+              
+              <div className="result-score">Bị loại khỏi kỳ thi</div>
+              <p className="result-description">Lý do: Rời khỏi trang làm bài 2 lần</p>
+              
+              <div className="result-buttons">
+                <button onClick={() => window.location.reload()} className="result-button primary">Thi lại</button>
+                <button onClick={() => { window.location.href = '/'; }} className="result-button secondary">Về trang chủ</button>
+              </div>
+            </div>
+          </div>
         </div>
+      );
+    }
+    
+    // Nếu không bị loại thì hiển thị kết quả bình thường
+    const isPassed = score >= 80;
+    
+    return (
+      <div className="official-exam-container">
+        <div className="official-exam-background">
+          <DarkVeil
+            speed={0.5}
+            hueShift={0}
+            noiseIntensity={0}
+            scanlineIntensity={0}
+            scanlineFrequency={0}
+            warpAmount={0}
+            resolutionScale={1}
+          />
+        </div>
+        
         <div className="result-container">
           <div className="result-card">
-            <div className={`result-icon ${isPassed ? 'passed' : 'failed'}`}>{isPassed ? '✅' : '❌'}</div>
-            {disqualified ? (
-              <>
-                <div className="result-score">Bạn đã bị hủy tư cách thi</div>
-                <p className="result-description">Lý do: Rời khỏi trang làm bài 2 lần</p>
-              </>
-            ) : (
-              <>
-                <div className="result-score">{score}/100 điểm</div>
-                <p className="result-description">Bạn trả lời đúng {correctAnswers}/{questions.length} câu</p>
-                
-                {/* Hiển thị thông tin câu điểm liệt */}
-                {criticalQuestionsFailed.length > 0 && (
-                  <div className="critical-warning">
-                    <div className="critical-icon">🚨</div>
-                    <div className="critical-text">
-                      <strong>Bài thi không đạt do sai câu điểm liệt!</strong><br/>
-                      Bạn đã sai {criticalQuestionsFailed.length} câu điểm liệt:
-                      <ul>
-                        {criticalQuestionsFailed.map((q, index) => (
-                          <li key={index}>
-                            Câu {questions.findIndex(question => question.Id === q.Id) + 1}: {q.QuestionText?.substring(0, 50)}...
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
+            <div className={`result-icon ${isPassed ? 'passed' : 'failed'}`}>
+              {isPassed ? '🎉' : '😔'}
+            </div>
+            <h2 className="result-title">
+              {isPassed ? 'Chúc mừng! Bạn đã đỗ!' : 'Tiếc quá! Bạn chưa đỗ'}
+            </h2>
+            
+            <div className="result-score">{score}/100 điểm</div>
+            <p className="result-description">Bạn trả lời đúng {correctAnswers}/{questions.length} câu</p>
+            
+            {/* Hiển thị thông tin đề thi */}
+            {examConfig && (
+              <div className="exam-info-display">
+                <p><strong>📊 Thông tin đề thi:</strong></p>
+                <p>• Số câu hỏi: {examConfig.totalQuestions}</p>
+                <p>• Câu điểm liệt: {examConfig.criticalQuestions}</p>
+                <p>• Chứng chỉ: {examConfig.category}</p>
+                <p>• Thời gian: {Math.floor(examConfig.timeLimit / 60)} phút</p>
+                {examConfig.minCriticalRequired > 0 && (
+                  <p>• Yêu cầu tối thiểu: {examConfig.minCriticalRequired} câu điểm liệt</p>
                 )}
-                
-                {certificateNote && (<p className="result-description" style={{ color: '#10b981' }}>{certificateNote}</p>)}
-                {certificateApiError && (<p className="result-description" style={{ color: '#ef4444' }}>{certificateApiError}</p>)}
-              </>
+              </div>
             )}
+            
+            {/* Hiển thị thông tin câu điểm liệt */}
+            {questions.some(q => q.IsCritical === 1) && (
+              <div className="critical-questions-info">
+                <p><strong>🚨 Câu điểm liệt:</strong></p>
+                <p>• Tổng số: {questions.filter(q => q.IsCritical === 1).length} câu</p>
+                <p>• Trả lời đúng: {questions.filter((q, i) => q.IsCritical === 1 && answers[i] === q.CorrectAnswer).length} câu</p>
+                <p>• Yêu cầu: Phải trả lời đúng TẤT CẢ câu điểm liệt để đỗ</p>
+              </div>
+            )}
+            
+            {/* Hiển thị ghi chú chứng chỉ */}
+            {certificateNote && (
+              <div className="certificate-note success">
+                {certificateNote}
+              </div>
+            )}
+            
+            {certificateApiError && (
+              <div className="certificate-note error">
+                {certificateApiError}
+              </div>
+            )}
+            
             <div className="result-buttons">
               <button onClick={() => window.location.reload()} className="result-button primary">Thi lại</button>
               {isPassed && (
                 <button onClick={() => { window.location.href = '/certificate'; }} className="result-button secondary">Đến trang chứng chỉ</button>
               )}
-              {!isPassed && (
-                <button onClick={() => window.location.href = '/'} className="result-button secondary">Về trang chủ</button>
-              )}
+              <button onClick={() => { window.location.href = '/'; }} className="result-button secondary">Về trang chủ</button>
             </div>
           </div>
         </div>
@@ -386,24 +468,40 @@ const OfficialExam = () => {
     );
   }
 
-  if (questions.length === 0) {
+  if (disqualified) {
     return (
-      <div className="practice-exam-container">
-        <div className="practice-exam-background">
-          <DarkVeil speed={0.5} hueShift={0} noiseIntensity={0} scanlineIntensity={0} scanlineFrequency={0} warpAmount={0} resolutionScale={1} />
+      <div className="official-exam-container">
+        <div className="official-exam-background">
+          <DarkVeil
+            speed={0.5}
+            hueShift={0}
+            noiseIntensity={0}
+            scanlineIntensity={0}
+            scanlineFrequency={0}
+            warpAmount={0}
+            resolutionScale={1}
+          />
         </div>
-        <div className="loading-container">
-          <p style={{ color: '#ef4444', fontSize: '18px' }}>Không thể tải câu hỏi. Vui lòng thử lại!</p>
+        
+        <div className="main-content">
+          <div className="disqualified-container">
+            <h2 className="disqualified-title">❌ Bạn đã bị loại!</h2>
+            <p className="disqualified-description">
+              Bạn đã vi phạm quy định thi nhiều lần và bị loại khỏi kỳ thi.
+            </p>
+            <div className="disqualified-buttons">
+              <button onClick={() => window.location.reload()} className="disqualified-button">Thi lại</button>
+              <button onClick={() => { window.location.href = '/'; }} className="disqualified-button secondary">Về trang chủ</button>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  const currentQ = questions && questions.length > 0 ? questions[currentQuestion] : null;
-
   return (
-    <div className="practice-exam-container">
-      <div className="practice-exam-background">
+    <div className="official-exam-container">
+      <div className="official-exam-background">
         <DarkVeil speed={0.5} hueShift={0} noiseIntensity={0} scanlineIntensity={0} scanlineFrequency={0} warpAmount={0} resolutionScale={1} />
       </div>
 
@@ -413,11 +511,11 @@ const OfficialExam = () => {
         <div className="home-popup-overlay">
           <div className="home-popup">
             <div className="home-popup-content">
-              <h3>Xác nhận</h3>
-              <p>Bạn có chắc chắn muốn về trang chủ? Tất cả tiến độ làm bài sẽ bị mất.</p>
+              <h3>⚠️ Cảnh báo</h3>
+              <p>Bạn có chắc chắn muốn rời khỏi trang thi?</p>
               <div className="home-popup-buttons">
-                <button onClick={handleConfirmHome} className="home-popup-btn confirm">Có, về trang chủ</button>
-                <button onClick={handleCancelHome} className="home-popup-btn cancel">Không, tiếp tục làm bài</button>
+                <button onClick={() => setShowHomePopup(false)} className="home-popup-btn cancel">Ở lại</button>
+                <button onClick={() => { window.location.href = '/'; }} className="home-popup-btn confirm">Rời khỏi</button>
               </div>
             </div>
           </div>
@@ -425,21 +523,26 @@ const OfficialExam = () => {
       )}
 
       {showAntiCheatPopup && (
-        <div className="home-popup-overlay">
-          <div className="home-popup">
-            <div className="home-popup-content">
-              <h3>Thông báo</h3>
-              <p>Phát hiện bạn rời khỏi trang làm bài. Đây là cảnh báo lần 1. Nếu tiếp tục, bạn sẽ bị hủy tư cách thi.</p>
-              <div className="home-popup-buttons">
-                <button onClick={handleAntiCheatPopupClose} className="home-popup-btn confirm">Tôi hiểu</button>
-              </div>
+        <div className="popup-overlay">
+          <div className="popup-content">
+            <h3>🚨 Cảnh báo vi phạm!</h3>
+            <p>
+              {violationsCount === 1 
+                ? 'Đây là lần vi phạm đầu tiên. Nếu vi phạm thêm 1 lần nữa, bạn sẽ bị loại khỏi kỳ thi!'
+                : 'Bạn đã vi phạm quy định thi nhiều lần và bị loại khỏi kỳ thi!'
+              }
+            </p>
+            <div className="popup-buttons">
+              <button onClick={handleAntiCheatPopupClose} className="popup-button primary">
+                {violationsCount === 1 ? 'Tôi hiểu rồi' : 'Đóng'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
       {showChangeNotification && (
-        <div className={`change-notification ${changeMessage.includes('hết lượt') ? 'warning' : ''}`}>
+        <div className="change-notification">
           {changeMessage}
         </div>
       )}
@@ -449,8 +552,10 @@ const OfficialExam = () => {
           <div className="exam-header-content">
             <div>
               <TextType
-                key={`exam-title-${currentQuestion}`}
-                text={[`Đề thi - ${questions ? questions.length : 0} câu hỏi`, `Bạn đang ở câu hỏi thứ ${currentQuestion + 1}`]}
+                text={[
+                  'Thi thật - Chứng chỉ an toàn giao thông',
+                  'Đề thi: 35 câu hỏi - Thời gian: 30 phút'
+                ]}
                 className="exam-title"
                 typingSpeed={75}
                 initialDelay={500}
@@ -462,112 +567,141 @@ const OfficialExam = () => {
               />
             </div>
             <div className="exam-info">
-              <span className="question-counter">Câu {currentQuestion + 1}/{questions ? questions.length : 0}</span>
-              <div className="timer"><span>⏰</span><span>{formatTime(timeLeft)}</span></div>
+              <div className="question-counter">
+                Câu hỏi: {currentQuestion + 1}/{questions.length}
+              </div>
+              <div className="timer">
+                <span>⏱️</span>
+                <span>{formatTime(timeLeft)}</span>
+              </div>
             </div>
           </div>
-          {isAdmin && (
-            <div style={{ marginTop: 8, display:'flex', gap:8 }}>
-              <button className="nav-button" onClick={devMakeExamEasy}>Dev: Làm dễ</button>
-            </div>
-          )}
         </div>
 
         <div className="exam-grid">
+          {/* Question Navigation */}
           <div className="question-nav">
-            <h3 className="question-nav-title">Danh sách câu hỏi</h3>
+            <h3 className="question-nav-title">
+              Danh sách câu hỏi
+            </h3>
+
             <div className="question-grid">
               {questions && questions.length > 0 && questions.map((_, index) => {
-                const questionId = questions[index].Id;
-                const answered = !!answers[questionId];
-                const changes = answerChanges[questionId] || 0;
-                const status = index === currentQuestion ? 'current' : (answered ? 'correct' : 'unanswered');
+                const status = index === currentQuestion ? 'current' : getQuestionStatus(index);
                 return (
-                  <button key={index} onClick={() => setCurrentQuestion(index)} className={`question-button ${status}`}>
-                    <span>{index + 1}</span>
-                    {changes > 0 && (
-                      <span className={`change-count ${changes >= 3 ? 'warning' : ''}`} title={`Đã sửa ${changes}/3 lần`}>
-                        {changes}
-                      </span>
-                    )}
+                  <button
+                    key={index}
+                    onClick={() => setCurrentQuestion(index)}
+                    className={`question-button ${status}`}
+                  >
+                    {index + 1}
                   </button>
                 );
               })}
             </div>
+
             <div className="question-legend">
-              <div className="legend-item"><div className="legend-color current"></div><span className="legend-text">Hiện tại</span></div>
-              <div className="legend-item"><div className="legend-color correct"></div><span className="legend-text">Đã chọn</span></div>
-              <div className="legend-item"><div className="legend-color unanswered"></div><span className="legend-text">Chưa làm</span></div>
-            </div>
-            <div className="change-info">
-              <p>💡 Bạn có thể sửa đáp án tối đa 3 lần cho mỗi câu hỏi</p>
+              <div className="legend-item">
+                <div className="legend-color current"></div>
+                <span className="legend-text">Hiện tại</span>
+              </div>
+              <div className="legend-item">
+                <div className="legend-color answered"></div>
+                <span className="legend-text">Đã làm</span>
+              </div>
+              <div className="legend-item">
+                <div className="legend-color unanswered"></div>
+                <span className="legend-text">Chưa làm</span>
+              </div>
             </div>
           </div>
 
+          {/* Question Content */}
           <div className="question-content">
             <div className="question-header">
               <h3 className="question-title">
                 Câu {currentQuestion + 1}:
                 {/* Icon câu điểm liệt */}
-                {currentQ && currentQ.IsCritical && (
+                {questions[currentQuestion] && questions[currentQuestion].IsCritical === 1 && (
                   <span className="critical-question-icon" title="Câu điểm liệt - Nếu sai sẽ không đạt bài thi">
                     🚨
                   </span>
                 )}
               </h3>
-              <p className="question-text">{currentQ ? currentQ.QuestionText : 'Đang tải câu hỏi...'}</p>
+               
+              <p className="question-text">
+                {questions[currentQuestion] ? questions[currentQuestion].QuestionText : 'Đang tải câu hỏi...'}
+              </p>
 
               <div className="answer-options">
-                {currentQ && ['A', 'B', 'C', 'D'].map(option => {
-                  const optionText = currentQ[`Option${option}`];
+                {questions[currentQuestion] && ['A', 'B', 'C', 'D'].map(option => {
+                  const optionText = questions[currentQuestion][`Option${option}`];
                   if (!optionText) return null;
-                  const isSelected = answers[currentQ.Id] === option;
-                  const changes = answerChanges[currentQ.Id] || 0;
-                  const isDisabled = changes >= 3;
+                   
+                  const isSelected = answers[currentQuestion] === option;
                   
+                  // THI THẬT: Không hiển thị đáp án đúng/sai cho đến khi nộp bài
+                  let optionClasses = 'answer-option';
+                  if (isSelected) {
+                    optionClasses += ' selected';
+                  }
+                   
                   return (
-                    <label key={option} className={`answer-option${isSelected ? ' selected' : ''}`}>
+                    <label 
+                      key={option}
+                      className={optionClasses}
+                    >
                       <input
                         type="radio"
-                        name={`question-${currentQ.Id}`}
+                        name={`question-${currentQuestion}`}
                         value={option}
                         checked={isSelected}
-                        onChange={() => handleAnswerSelect(currentQ.Id, option)}
+                        onChange={() => handleAnswerChange(currentQuestion, option)}
                         className="answer-radio"
-                        disabled={isDisabled}
+                        disabled={isSubmitted}
                       />
                       <div className="answer-text">
                         <span className="answer-label">{option}.</span>
                         <span className="answer-content">{optionText}</span>
-                        {isSelected && (
-                          <span className="answer-status correct">✓ Đã chọn</span>
+                        {/* THI THẬT: Hiển thị số lần sửa đáp án - CHỈ HIỂN THỊ KHI CÓ SỬA ĐÁP ÁN */}
+                        {isSelected && answerChanges[currentQuestion] > 0 && (
+                          <span className="change-count">
+                            ({answerChanges[currentQuestion]}/3)
+                          </span>
                         )}
                       </div>
                     </label>
                   );
                 })}
               </div>
-
-              {isSubmitted && currentQ && (
-                <div className="explanation">
-                  <div className="explanation-section">
-                    <div className="explanation-title correct">Đáp án đúng:</div>
-                    <div className="explanation-content correct">
-                      {currentQ.CorrectAnswer}. {currentQ[`Option${currentQ.CorrectAnswer}`]}
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
 
+            {/* Navigation Buttons */}
             <div className="navigation-buttons">
-              <button onClick={() => setCurrentQuestion(Math.max(0, currentQuestion - 1))} disabled={currentQuestion === 0} className="nav-button">← Trước</button>
+              <button
+                onClick={() => setCurrentQuestion(Math.max(0, currentQuestion - 1))}
+                disabled={currentQuestion === 0}
+                className="nav-button"
+              >
+                ← Trước
+              </button>
+
               <div className="nav-button-group">
-                <button onClick={() => setCurrentQuestion(Math.min((questions ? questions.length : 0) - 1, currentQuestion + 1))} disabled={currentQuestion === (questions ? questions.length : 0) - 1} className="nav-button next">Sau →</button>
-                {getUser() && getUser().id === 1 && (
-                  <button onClick={devMarkPass} className="nav-button" title="Chỉ admin (ID=1)">Dev: Đậu</button>
-                )}
-                <button onClick={handleSubmit} disabled={isSubmitted} className="nav-button submit">Nộp bài</button>
+                <button
+                  onClick={() => setCurrentQuestion(Math.min(questions.length - 1, currentQuestion + 1))}
+                  disabled={currentQuestion === questions.length - 1}
+                  className="nav-button next"
+                >
+                  Sau →
+                </button>
+
+                <button
+                  onClick={handleSubmit}
+                  disabled={isSubmitted || Object.keys(answers).length < questions.length}
+                  className="nav-button submit"
+                >
+                  Nộp bài
+                </button>
               </div>
             </div>
           </div>
