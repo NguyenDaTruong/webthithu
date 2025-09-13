@@ -347,7 +347,7 @@
 }
 
 .question-button:hover:not(.current) {
-  transform: scale(1.1);
+  /* transform: scale(1.1); */ /* Tắt hiệu ứng scale để tránh layer thay đổi */
 }
 
 /* Change count indicator */
@@ -480,7 +480,7 @@
 
 .answer-option:hover:not(.selected):not(:has(input:disabled)) {
   background-color: rgba(255, 255, 255, 0.1);
-  transform: translateY(-2px);
+  /* transform: translateY(-2px); */ /* Tắt hiệu ứng layer thay đổi */
 }
 
 .answer-option:has(input:disabled) {
@@ -802,6 +802,37 @@
 .home-popup-btn.cancel:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: translateY(-2px);
+}
+
+/* Override để tránh xung đột CSS từ AdminDashboard */
+.practice-exam-container * {
+  /* Đảm bảo không có transform không mong muốn */
+  transform: none !important;
+}
+
+.practice-exam-container .answer-option:hover {
+  transform: none !important;
+}
+
+.practice-exam-container .question-button:hover {
+  transform: none !important;
+}
+
+/* Tắt tất cả hiệu ứng transform cho đáp án */
+.practice-exam-container .answer-option {
+  transform: none !important;
+  animation: none !important;
+  transition: background-color 0.3s ease, border-color 0.3s ease !important;
+}
+
+.practice-exam-container .answer-option.correct-answer {
+  transform: none !important;
+  animation: none !important;
+}
+
+.practice-exam-container .answer-option.selected {
+  transform: none !important;
+  animation: none !important;
 }
 
 /* Change Notification Styles */

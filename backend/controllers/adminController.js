@@ -249,7 +249,7 @@ exports.getQuestions = async (req, res) => {
     
     const result = await pool.request().query(`
       SELECT Id, QuestionText, OptionA, OptionB, OptionC, OptionD, 
-             CorrectAnswer, Category
+             CorrectAnswer, Category, Explanation
       FROM [dbo].[Questions] 
       ORDER BY Id DESC
     `);
@@ -273,7 +273,7 @@ exports.getQuestionById = async (req, res) => {
       .input('id', sql.Int, id)
       .query(`
         SELECT Id, QuestionText, OptionA, OptionB, OptionC, OptionD, 
-               CorrectAnswer, Category
+               CorrectAnswer, Category, Explanation
         FROM [dbo].[Questions] WHERE Id = @id
       `);
 
@@ -295,7 +295,7 @@ exports.createQuestion = async (req, res) => {
   try {
     const { 
       questionText, optionA, optionB, optionC, optionD, 
-      correctAnswer, category
+      correctAnswer, category, explanation
     } = req.body;
     
     if (!questionText || !optionA || !optionB || !optionC || !optionD || !correctAnswer || !category) {
@@ -312,15 +312,16 @@ exports.createQuestion = async (req, res) => {
       .input('optionD', sql.NVarChar, optionD)
       .input('correctAnswer', sql.VarChar, correctAnswer)
       .input('category', sql.VarChar, category)
+      .input('explanation', sql.NVarChar, explanation || null)
       .query(`
         INSERT INTO [dbo].[Questions] (
           QuestionText, OptionA, OptionB, OptionC, OptionD, 
-          CorrectAnswer, Category
+          CorrectAnswer, Category, Explanation
         )
         OUTPUT INSERTED.Id, INSERTED.QuestionText, INSERTED.Category
         VALUES (
           @questionText, @optionA, @optionB, @optionC, @optionD, 
-          @correctAnswer, @category
+          @correctAnswer, @category, @explanation
         )
       `);
 
@@ -340,7 +341,7 @@ exports.updateQuestion = async (req, res) => {
     const { id } = req.params;
     const { 
       questionText, optionA, optionB, optionC, optionD, 
-      correctAnswer, category
+      correctAnswer, category, explanation
     } = req.body;
     
     if (!questionText || !optionA || !optionB || !optionC || !optionD || !correctAnswer || !category) {
@@ -368,6 +369,7 @@ exports.updateQuestion = async (req, res) => {
       .input('optionD', sql.NVarChar, optionD)
       .input('correctAnswer', sql.VarChar, correctAnswer)
       .input('category', sql.VarChar, category)
+      .input('explanation', sql.NVarChar, explanation || null)
       .query(`
         UPDATE [dbo].[Questions] 
         SET QuestionText = @questionText, 
@@ -376,7 +378,8 @@ exports.updateQuestion = async (req, res) => {
             OptionC = @optionC, 
             OptionD = @optionD, 
             CorrectAnswer = @correctAnswer, 
-            Category = @category
+            Category = @category,
+            Explanation = @explanation
         WHERE Id = @id
       `);
 

@@ -8,7 +8,7 @@ const OfficialExam = () => {
   const [questions, setQuestions] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(10 * 60);
+  const [timeLeft, setTimeLeft] = useState(20 * 60); // 20 phút cho 20 câu hỏi
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [score, setScore] = useState(0);
@@ -38,11 +38,14 @@ const OfficialExam = () => {
     try { window.scrollTo(0, 0); } catch {}
     const fetchQuestions = async () => {
       try {
-        const res = await fetch('http://localhost:5000/api/questions');
+        // Sử dụng API mới cho thi thật - 20 câu hỏi với random đáp án
+        const res = await fetch('http://localhost:5000/api/questions/official');
         const data = await res.json();
-        setQuestions(data);
+        console.log('Loaded official exam questions:', data ? data.length : 0);
+        setQuestions(data || []);
       } catch (e) {
-        // Error loading questions
+        console.error('Error loading official exam questions:', e);
+        setQuestions([]);
       } finally {
         setLoading(false);
       }
@@ -285,7 +288,7 @@ const OfficialExam = () => {
         const only = [first];
         setAnswers({ [first.Id]: first.CorrectAnswer });
         setCurrentQuestion(0);
-        setTimeLeft(10);
+        setTimeLeft(60); // 1 phút cho 1 câu
         showChangeMessage('Dev: Đã bật chế độ dễ (1 câu, có đáp án).');
         return only;
       });
@@ -450,7 +453,7 @@ const OfficialExam = () => {
             <div>
               <TextType
                 key={`exam-title-${currentQuestion}`}
-                text={[`Đề thi - ${questions ? questions.length : 0} câu hỏi`, `Bạn đang ở câu hỏi thứ ${currentQuestion + 1}`]}
+                text={[`Đề thi thật - ${questions ? questions.length : 0} câu hỏi`, `Bạn đang ở câu hỏi thứ ${currentQuestion + 1}`]}
                 className="exam-title"
                 typingSpeed={75}
                 initialDelay={500}

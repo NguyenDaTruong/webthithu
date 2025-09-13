@@ -8,7 +8,7 @@ const PracticeExam = () => {
   const [questions, setQuestions] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(10 * 60); // 10 minutes for 10 questions
+  const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 minutes for 25 questions
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showResult, setShowResult] = useState(false);
   const [score, setScore] = useState(0);
@@ -22,17 +22,17 @@ const PracticeExam = () => {
     try { window.scrollTo(0, 0); } catch {}
     const fetchQuestions = async () => {
       try {
-        // Lấy tất cả câu hỏi từ database
-        const response = await fetch('http://localhost:5000/api/questions');
+        // Lấy 25 câu hỏi random với random đáp án
+        const response = await fetch('http://localhost:5000/api/questions/random?count=25&shuffleOptions=true');
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data = await response.json();
-        console.log('Loaded questions:', data ? data.length : 0);
+        console.log('Loaded practice questions:', data ? data.length : 0);
         setQuestions(data || []);
         setLoading(false);
       } catch (error) {
-        console.error('Error loading questions:', error);
+        console.error('Error loading practice questions:', error);
         setQuestions([]);
         setLoading(false);
       }
@@ -165,7 +165,13 @@ const PracticeExam = () => {
 
   const getExplanation = (question) => {
     if (!question) return 'Không có giải thích cho câu hỏi này.';
-    // Tạo giải thích dựa trên đáp án đúng
+    
+    // Nếu có giải thích từ database
+    if (question.Explanation && question.Explanation.trim()) {
+      return question.Explanation;
+    }
+    
+    // Nếu chưa có giải thích, hiển thị text mặc định
     const optionText = question[`Option${question.CorrectAnswer}`];
     return `Đáp án đúng là ${question.CorrectAnswer}: ${optionText}. Hãy đọc kỹ câu hỏi và các lựa chọn để hiểu rõ hơn về quy tắc giao thông.`;
   };
@@ -360,7 +366,7 @@ const PracticeExam = () => {
               <TextType
                 key={`exam-title-${currentQuestion}`}
                 text={[
-                  `Đề thi thử - ${questions ? questions.length : 0} câu hỏi`,
+                  `Thi thử - ${questions ? questions.length : 0} câu hỏi`,
                   `Bạn đang ở câu hỏi thứ ${currentQuestion + 1}`
                 ]}
                 className="exam-title"
@@ -511,7 +517,7 @@ const PracticeExam = () => {
                    
                   <div className="explanation-section">
                     <div className="explanation-title explanation">
-                      Giải thích:
+                      {currentQ && currentQ.Explanation && currentQ.Explanation.trim() ? 'Giải thích:' : 'Chưa có giải thích:'}
                     </div>
                     <div className="explanation-content explanation">
                       {getExplanation(currentQ)}

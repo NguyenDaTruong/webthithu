@@ -65,7 +65,8 @@ const AdminDashboard = () => {
     correctAnswer: 'A',
     category: 'An toàn giao thông',
     numberOfOptions: 4, // Số lượng đáp án (2 hoặc 4)
-    isCritical: false // Câu điểm liệt
+    isCritical: false, // Câu điểm liệt
+    explanation: '' // Giải thích câu hỏi
   });
 
   const categories = ['An toàn giao thông'];
@@ -215,7 +216,8 @@ const AdminDashboard = () => {
       correctAnswer: question.CorrectAnswer || 'A',
       category: question.Category || 'An toàn giao thông',
       numberOfOptions: question.OptionC && question.OptionD ? 4 : 2, // Tự động detect số đáp án
-      isCritical: question.IsCritical || false
+      isCritical: question.IsCritical || false,
+      explanation: question.Explanation || ''
     });
     setShowEditModal(true);
   };
@@ -538,6 +540,7 @@ const AdminDashboard = () => {
                 <th>Câu hỏi</th>
                 <th>Category</th>
                 <th>Đáp án đúng</th>
+                <th>Giải thích</th>
                 <th>Điểm liệt</th>
                 <th>Thao tác</th>
               </tr>
@@ -545,11 +548,11 @@ const AdminDashboard = () => {
             <tbody>
                                 {loading ? (
                     <tr>
-                      <td colSpan="6" className="loading">Đang tải dữ liệu...</td>
+                      <td colSpan="7" className="loading">Đang tải dữ liệu...</td>
                     </tr>
                   ) : currentQuestions.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="empty-state">Không tìm thấy câu hỏi nào</td>
+                      <td colSpan="7" className="empty-state">Không tìm thấy câu hỏi nào</td>
                     </tr>
               ) : (
                 currentQuestions.map((question, index) => (
@@ -565,6 +568,13 @@ const AdminDashboard = () => {
                     </td>
                     <td>
                       <span className="correct-answer">{question.CorrectAnswer}</span>
+                    </td>
+                    <td>
+                      {question.Explanation && question.Explanation.trim() ? (
+                        <span className="explanation-badge">✅ Có</span>
+                      ) : (
+                        <span className="no-explanation-badge">❌ Chưa có</span>
+                      )}
                     </td>
                     <td>
                       {question.IsCritical ? (
@@ -1072,6 +1082,18 @@ const QuestionModal = ({ title, formData, setFormData, onSubmit, onClose, catego
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Giải thích */}
+          <div className="form-group">
+            <label>Giải thích</label>
+            <textarea
+              value={formData.explanation}
+              onChange={(e) => setFormData({...formData, explanation: e.target.value})}
+              placeholder="Nhập giải thích cho câu hỏi này..."
+              rows="3"
+              className="answer-textarea"
+            />
           </div>
 
           {/* Câu điểm liệt */}
