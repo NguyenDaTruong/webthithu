@@ -31,7 +31,6 @@ exports.evaluateEligibility = async (req, res) => {
     if (!userId) return res.status(401).json({ message: 'Unauthorized' });
 
     const { score, criticalCorrect, resultId, correct, total } = req.body || {};
-    // Debug log removed
 
     let computedScore10;
     let isPassed;
@@ -43,7 +42,6 @@ exports.evaluateEligibility = async (req, res) => {
     } else {
       // Fallback tương thích cũ
       if (typeof score !== 'number' || typeof criticalCorrect !== 'boolean') {
-        // Debug log removed
         return res.status(400).json({ message: 'Provide either (correct, total) or (score, criticalCorrect)' });
       }
       isPassed = score >= 8 && !!criticalCorrect;
@@ -58,7 +56,24 @@ exports.evaluateEligibility = async (req, res) => {
       return res.json({ isPassed: latest.recordset[0].isPassed === true, certificate: latest.recordset[0], locked: true });
     }
 
-    // Upsert đồng bộ các trường phổ biến có trong schema của bạn
+    // Tạo Results record trước để có ResultId hợp lệ
+    let actualResultId = resultId;
+    if (!actualResultId || actualResultId === 0) {
+      const insertResult = await pool.request()
+        .input('userId', sql.Int, userId)
+        .input('score', sql.Int, computedScore10)
+        .input('passed', sql.Bit, isPassed ? 1 : 0)
+        .query(`INSERT INTO dbo.Results (UserId, Score, Passed, AttemptDate)
+                VALUES (@userId, @score, @passed, GETDATE());
+                SELECT CAST(SCOPE_IDENTITY() AS INT) AS rid;`);
+      
+      actualResultId = insertResult.recordset && insertResult.recordset[0] && insertResult.recordset[0].rid;
+      if (!actualResultId) {
+        return res.status(500).json({ message: 'Cannot create Results record' });
+      }
+    }
+
+    // Upsert Certificate với ResultId hợp lệ
     const dbReq = pool.request()
       .input('userId', sql.Int, userId)
       .input('isPassed', sql.Bit, isPassed ? 1 : 0)
@@ -66,7 +81,7 @@ exports.evaluateEligibility = async (req, res) => {
       .input('criticalCorrect', sql.Bit, 1)
       .input('correct', sql.Int, typeof correct === 'number' ? correct : null)
       .input('total', sql.Int, typeof total === 'number' ? total : null)
-      .input('resultId', sql.Int, typeof resultId === 'number' ? resultId : 0);
+      .input('resultId', sql.Int, actualResultId);
 
     const upsertQuery = `
       IF EXISTS (SELECT 1 FROM dbo.Certificates WHERE userId = @userId)
@@ -77,6 +92,7 @@ exports.evaluateEligibility = async (req, res) => {
               criticalCorrect = CASE WHEN COLUMNPROPERTY(OBJECT_ID('dbo.Certificates'),'criticalCorrect','ColumnId') IS NULL THEN criticalCorrect ELSE @criticalCorrect END,
               CorrectAnswers = CASE WHEN COLUMNPROPERTY(OBJECT_ID('dbo.Certificates'),'CorrectAnswers','ColumnId') IS NULL THEN CorrectAnswers ELSE @correct END,
               TotalQuestions = CASE WHEN COLUMNPROPERTY(OBJECT_ID('dbo.Certificates'),'TotalQuestions','ColumnId') IS NULL THEN TotalQuestions ELSE @total END,
+              ResultId = CASE WHEN COLUMNPROPERTY(OBJECT_ID('dbo.Certificates'),'ResultId','ColumnId') IS NULL THEN ResultId ELSE @resultId END,
               UpdatedAt = CASE WHEN COLUMNPROPERTY(OBJECT_ID('dbo.Certificates'),'UpdatedAt','ColumnId') IS NULL THEN GETDATE() ELSE GETDATE() END
         WHERE Id = (SELECT TOP 1 Id FROM dbo.Certificates WHERE userId = @userId ORDER BY Id DESC);
       END
@@ -85,26 +101,25 @@ exports.evaluateEligibility = async (req, res) => {
         DECLARE @hasResultId BIT = CASE WHEN COL_LENGTH('dbo.Certificates','ResultId') IS NULL THEN 0 ELSE 1 END;
         DECLARE @hasCertPath BIT = CASE WHEN COL_LENGTH('dbo.Certificates','CertPath') IS NULL THEN 0 ELSE 1 END;
 
-        IF @hasResultId = 1 AND @resultId IS NOT NULL AND @hasCertPath = 1
-          INSERT INTO dbo.Certificates(userId, isPassed, ResultId, CertPath)
-          VALUES(@userId, @isPassed, @resultId, N'');
-        ELSE IF @hasResultId = 1 AND @resultId IS NOT NULL AND @hasCertPath = 0
-          INSERT INTO dbo.Certificates(userId, isPassed, ResultId)
-          VALUES(@userId, @isPassed, @resultId);
+        IF @hasResultId = 1 AND @hasCertPath = 1
+          INSERT INTO dbo.Certificates(userId, isPassed, ResultId, CertPath, score, criticalCorrect, CorrectAnswers, TotalQuestions)
+          VALUES(@userId, @isPassed, @resultId, N'', @score, @criticalCorrect, @correct, @total);
+        ELSE IF @hasResultId = 1 AND @hasCertPath = 0
+          INSERT INTO dbo.Certificates(userId, isPassed, ResultId, score, criticalCorrect, CorrectAnswers, TotalQuestions)
+          VALUES(@userId, @isPassed, @resultId, @score, @criticalCorrect, @correct, @total);
         ELSE IF @hasCertPath = 1
-          INSERT INTO dbo.Certificates(userId, isPassed, CertPath)
-          VALUES(@userId, @isPassed, N'');
+          INSERT INTO dbo.Certificates(userId, isPassed, CertPath, score, criticalCorrect, CorrectAnswers, TotalQuestions)
+          VALUES(@userId, @isPassed, N'', @score, @criticalCorrect, @correct, @total);
         ELSE
-          INSERT INTO dbo.Certificates(userId, isPassed)
-          VALUES(@userId, @isPassed);
+          INSERT INTO dbo.Certificates(userId, isPassed, score, criticalCorrect, CorrectAnswers, TotalQuestions)
+          VALUES(@userId, @isPassed, @score, @criticalCorrect, @correct, @total);
       END
       SELECT TOP 1 * FROM dbo.Certificates WHERE userId = @userId ORDER BY Id DESC;`;
 
     const updated = await dbReq.query(upsertQuery);
     let certUpdated = updated.recordset && updated.recordset[0];
 
-    // Debug log removed
-    return res.json({ isPassed, certificate: certUpdated  });
+    return res.json({ isPassed, certificate: certUpdated });
   } catch (err) {
     console.error('evaluateEligibility error', err);
     return res.status(500).json({ message: String(err && err.message ? err.message : err) });
